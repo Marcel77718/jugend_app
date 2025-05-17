@@ -2,7 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:jugend_app/helpers/snackbar_helper.dart';
 import 'package:jugend_app/view/lobby_view_model.dart';
+import 'package:jugend_app/view/widgets/player_tile.dart';
 
 class LobbyScreen extends StatelessWidget {
   final String lobbyId;
@@ -37,8 +40,24 @@ class LobbyScreen extends StatelessWidget {
             );
           }
 
+          final isKicked =
+              viewModel.players.isNotEmpty &&
+              !viewModel.players.any((p) => p['id'] == viewModel.deviceId);
+          if (isKicked) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                showRedSnackbar(context, 'Du wurdest aus der Lobby entfernt.');
+                context.go('/');
+              }
+            });
+          }
+
           return Scaffold(
             appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => _handleBackPressed(context, viewModel),
+              ),
               title: Text('${viewModel.gameType} Lobby'),
               actions: [
                 Padding(
@@ -60,30 +79,28 @@ class LobbyScreen extends StatelessWidget {
                     itemCount: viewModel.players.length,
                     itemBuilder: (context, index) {
                       final player = viewModel.players[index];
-                      final isReady = player['isReady'] == true;
-                      final isCurrent = player['id'] == viewModel.deviceId;
-                      final isHostPlayer = player['id'] == viewModel.hostId;
-
-                      return ListTile(
-                        leading: Icon(
-                          isHostPlayer
-                              ? Icons.emoji_events
-                              : isReady
-                              ? Icons.circle
-                              : Icons.circle_outlined,
-                          color:
-                              isHostPlayer
-                                  ? Colors.blue
-                                  : isReady
-                                  ? Colors.green
-                                  : Colors.red,
-                        ),
-                        title: Text(
-                          player['name'] ?? 'Unbekannt',
-                          style: TextStyle(
-                            fontWeight: isCurrent ? FontWeight.bold : null,
-                          ),
-                        ),
+                      return PlayerTile(
+                        player: player,
+                        isOwnPlayer: player['id'] == viewModel.deviceId,
+                        isHost: player['id'] == viewModel.hostId,
+                        onKick:
+                            viewModel.isHost &&
+                                    player['id'] != viewModel.deviceId
+                                ? () => _confirmKick(
+                                  context,
+                                  viewModel,
+                                  player['id'],
+                                  player['name'],
+                                )
+                                : null,
+                        onNameChange:
+                            player['id'] == viewModel.deviceId
+                                ? () => _showNameChangeDialog(
+                                  context,
+                                  viewModel,
+                                  player['id'],
+                                )
+                                : null,
                       );
                     },
                   ),
@@ -112,5 +129,110 @@ class LobbyScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _handleBackPressed(
+    BuildContext context,
+    LobbyViewModel viewModel,
+  ) async {
+    final shouldLeave =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Lobby verlassen?'),
+                content: const Text(
+                  'Bist du sicher, dass du die Lobby verlassen möchtest?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Nein'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Ja'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+
+    if (!context.mounted) return;
+
+    if (shouldLeave) {
+      await viewModel.leaveLobby();
+      if (context.mounted) {
+        context.go('/');
+      }
+    }
+  }
+
+  Future<void> _confirmKick(
+    BuildContext context,
+    LobbyViewModel viewModel,
+    String playerId,
+    String playerName,
+  ) async {
+    final shouldKick =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Spieler kicken?'),
+                content: Text(
+                  'Möchtest du $playerName wirklich aus der Lobby entfernen?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Nein'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Ja'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+
+    if (!context.mounted) return;
+    if (shouldKick) {
+      await viewModel.kickPlayer(playerId);
+    }
+  }
+
+  Future<void> _showNameChangeDialog(
+    BuildContext context,
+    LobbyViewModel viewModel,
+    String playerId,
+  ) async {
+    final controller = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Name ändern'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(hintText: 'Neuer Name'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Abbrechen'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, controller.text),
+                child: const Text('Ändern'),
+              ),
+            ],
+          ),
+    );
+
+    if (!context.mounted || result == null || result.trim().isEmpty) return;
+    await viewModel.updatePlayerName(context, result.trim());
   }
 }

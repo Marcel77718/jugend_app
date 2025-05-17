@@ -1,83 +1,83 @@
 // Datei: lib/view/widgets/player_tile.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:jugend_app/view/lobby_view_model.dart';
 
 class PlayerTile extends StatelessWidget {
-  final String playerId;
-  final String playerName;
+  final Map<String, dynamic> player;
   final bool isHost;
-  final bool isCurrentUser;
+  final bool isOwnPlayer;
+  final VoidCallback? onKick;
+  final VoidCallback? onNameChange;
 
   const PlayerTile({
     super.key,
-    required this.playerId,
-    required this.playerName,
+    required this.player,
     required this.isHost,
-    required this.isCurrentUser,
+    required this.isOwnPlayer,
+    this.onKick,
+    this.onNameChange,
   });
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = Provider.of<LobbyViewModel>(context);
+    final isReady = player['isReady'] == true;
+
+    final point = Icon(
+      isHost ? (isReady ? Icons.circle : Icons.circle_outlined) : Icons.circle,
+      color:
+          isHost
+              ? Colors.blue
+              : isReady
+              ? Colors.green
+              : Colors.red,
+      size: 12,
+    );
+
+    final crown =
+        isHost
+            ? const Padding(
+              padding: EdgeInsets.only(left: 8.0),
+              child: Icon(
+                Icons.workspace_premium,
+                size: 16,
+                color: Colors.amber,
+              ),
+            )
+            : const SizedBox.shrink();
+
+    final kickButton =
+        onKick != null
+            ? IconButton(
+              icon: const Icon(Icons.close, size: 16),
+              onPressed: onKick,
+            )
+            : const SizedBox.shrink();
+
+    final nameEdit =
+        onNameChange != null
+            ? IconButton(
+              icon: const Icon(Icons.edit, size: 16),
+              onPressed: onNameChange,
+            )
+            : const SizedBox.shrink();
 
     return ListTile(
-      leading: Icon(
-        isHost
-            ? Icons.emoji_events
-            : isCurrentUser
-            ? Icons.account_circle
-            : Icons.person,
-      ),
-      title: Text(playerName),
-      trailing:
-          isHost && !isCurrentUser
-              ? IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => viewModel.kickPlayer(playerId),
-              )
-              : null,
-      onTap:
-          isCurrentUser
-              ? () async {
-                final newName = await _showChangeNameDialog(
-                  context,
-                  playerName,
-                );
-                if (newName != null && newName.isNotEmpty) {
-                  viewModel.confirmNameChangeDialog(newName);
-                }
-              }
-              : null,
-    );
-  }
-
-  Future<String?> _showChangeNameDialog(
-    BuildContext context,
-    String currentName,
-  ) {
-    final controller = TextEditingController(text: currentName);
-    return showDialog<String>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Namen ändern'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(labelText: 'Neuer Name'),
+      leading: point,
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              player['name'] ?? 'Unbenannt',
+              style: TextStyle(
+                fontWeight: isOwnPlayer ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Abbrechen'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, controller.text.trim()),
-                child: const Text('Ändern'),
-              ),
-            ],
           ),
+          crown,
+          nameEdit,
+          kickButton,
+        ],
+      ),
     );
   }
 }
