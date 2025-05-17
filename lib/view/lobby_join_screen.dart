@@ -56,7 +56,13 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Spiel beitreten')),
+      appBar: AppBar(
+        title: const Text('Spiel beitreten'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/lobbies'),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

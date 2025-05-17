@@ -46,7 +46,13 @@ class _LobbyCreateScreenState extends State<LobbyCreateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Spiel erstellen')),
+      appBar: AppBar(
+        title: const Text('Spiel erstellen'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/lobbies'),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
