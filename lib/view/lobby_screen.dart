@@ -1,7 +1,6 @@
 // Datei: lib/view/lobby_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jugend_app/helpers/snackbar_helper.dart';
@@ -68,7 +67,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
           return PopScope(
             canPop: true,
-            onPopInvoked: (didPop) async {
+            onPopInvokedWithResult: (didPop, result) async {
               if (!didPop) {
                 await _handleBackPressed(context, viewModel);
               }

@@ -174,10 +174,13 @@ class LobbyViewModel extends ChangeNotifier {
     );
 
     if (nameExists) {
-      showRedSnackbar(context, 'Name existiert bereits in der Lobby');
+      if (context.mounted) {
+        showRedSnackbar(context, 'Name existiert bereits in der Lobby');
+      }
       return;
     }
 
+    if (!context.mounted) return;
     await updatePlayerName(context, newName);
   }
 
@@ -192,11 +195,13 @@ class LobbyViewModel extends ChangeNotifier {
       _players.add(updatedPlayer);
       notifyListeners();
 
-      if (!context.mounted) return;
-      showGreenSnackbar(context, 'Name erfolgreich geändert');
+      if (context.mounted) {
+        showGreenSnackbar(context, 'Name erfolgreich geändert');
+      }
     } catch (e) {
-      if (!context.mounted) return;
-      showRedSnackbar(context, 'Fehler: ${e.toString()}');
+      if (context.mounted) {
+        showRedSnackbar(context, 'Fehler: ${e.toString()}');
+      }
     }
   }
 
