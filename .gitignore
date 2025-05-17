@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ChatGPT hat gesagt ich soll das adden
+build/
+.dart_tool/
+.idea/
+.packages
+pubspec.lock
