@@ -163,11 +163,16 @@ class LobbyViewModel extends ChangeNotifier {
       return;
     }
 
-    final nameExists = players.any(
+    final snapshot = await _lobbyRef.get();
+    final allPlayers =
+        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+
+    final nameExists = allPlayers.any(
       (p) =>
           p['name'].toString().toLowerCase() == newName.toLowerCase() &&
-          p['id'] != deviceId,
+          p['id'] != _deviceId,
     );
+
     if (nameExists) {
       showRedSnackbar(context, 'Name existiert bereits in der Lobby');
       return;

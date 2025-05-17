@@ -21,6 +21,12 @@ class SnackbarHelper {
       SnackBar(content: Text(message), backgroundColor: AppColors.error),
     );
   }
+
+  static void neutral(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppColors.neutral),
+    );
+  }
 }
 
 void showGreenSnackbar(BuildContext context, String message) {
@@ -29,4 +35,8 @@ void showGreenSnackbar(BuildContext context, String message) {
 
 void showRedSnackbar(BuildContext context, String message) {
   SnackbarHelper.error(context, message);
+}
+
+void showNeutralSnackbar(BuildContext context, String message) {
+  SnackbarHelper.neutral(context, message);
 }

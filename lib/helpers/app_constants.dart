@@ -13,9 +13,8 @@ class AppColors {
   static const primary = Colors.teal;
   static const error = Colors.red;
   static const success = Colors.green;
-  static const infoBoxBackground = Color(
-    0xFF14796E,
-  ); // Fix: 8-stelliger Hex-Wert
+  static const neutral = Colors.grey;
+  static const infoBoxBackground = Color(0xFF14796E);
 }
 
 class AppText {

@@ -1,13 +1,14 @@
 // Datei: lib/view/lobby_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jugend_app/helpers/snackbar_helper.dart';
 import 'package:jugend_app/view/lobby_view_model.dart';
 import 'package:jugend_app/view/widgets/player_tile.dart';
 
-class LobbyScreen extends StatelessWidget {
+class LobbyScreen extends StatefulWidget {
   final String lobbyId;
   final String playerName;
   final bool isHost;
@@ -22,15 +23,22 @@ class LobbyScreen extends StatelessWidget {
   });
 
   @override
+  State<LobbyScreen> createState() => _LobbyScreenState();
+}
+
+class _LobbyScreenState extends State<LobbyScreen> {
+  bool hasLeft = false;
+
+  @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create:
           (_) =>
               LobbyViewModel()..initialize(
-                lobbyId: lobbyId,
-                playerName: playerName,
-                isHost: isHost,
-                gameType: gameType,
+                lobbyId: widget.lobbyId,
+                playerName: widget.playerName,
+                isHost: widget.isHost,
+                gameType: widget.gameType,
               ),
       child: Consumer<LobbyViewModel>(
         builder: (context, viewModel, _) {
@@ -43,89 +51,102 @@ class LobbyScreen extends StatelessWidget {
           final isKicked =
               viewModel.players.isNotEmpty &&
               !viewModel.players.any((p) => p['id'] == viewModel.deviceId);
-          if (isKicked) {
+
+          if (isKicked && !hasLeft) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (context.mounted) {
-                showRedSnackbar(context, 'Du wurdest aus der Lobby entfernt.');
+                showRedSnackbar(context, 'Du wurdest vom Host gekickt.');
                 context.go('/');
               }
             });
           }
 
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => _handleBackPressed(context, viewModel),
-              ),
-              title: Text('${viewModel.gameType} Lobby'),
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Center(
-                    child: Text(
-                      'ID: ${viewModel.lobbyId}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
+          final sortedPlayers = [
+            ...viewModel.players.where((p) => p['id'] == viewModel.deviceId),
+            ...viewModel.players.where((p) => p['id'] != viewModel.deviceId),
+          ];
+
+          return PopScope(
+            canPop: true,
+            onPopInvoked: (didPop) async {
+              if (!didPop) {
+                await _handleBackPressed(context, viewModel);
+              }
+            },
+            child: Scaffold(
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => _handleBackPressed(context, viewModel),
                 ),
-              ],
-            ),
-            body: Column(
-              children: [
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: viewModel.players.length,
-                    itemBuilder: (context, index) {
-                      final player = viewModel.players[index];
-                      return PlayerTile(
-                        key: ValueKey(player['id']),
-                        player: player,
-                        isOwnPlayer: player['id'] == viewModel.deviceId,
-                        isHost: viewModel.isHost,
-                        hostId: viewModel.hostId,
-                        onKick:
-                            viewModel.isHost &&
-                                    player['id'] != viewModel.deviceId
-                                ? () => _confirmKick(
-                                  context,
-                                  viewModel,
-                                  player['id'],
-                                  player['name'],
-                                )
-                                : null,
-                        onNameChange:
-                            player['id'] == viewModel.deviceId
-                                ? () => _showNameChangeDialog(
-                                  context,
-                                  viewModel,
-                                  player['id'],
-                                )
-                                : null,
-                      );
-                    },
-                  ),
-                ),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => viewModel.toggleReadyStatus(),
+                title: Text('${viewModel.gameType} Lobby'),
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Center(
                       child: Text(
-                        viewModel.isReady ? 'Nicht bereit' : 'Bereit',
+                        'ID: ${viewModel.lobbyId}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
-                    if (viewModel.isHost && viewModel.everyoneReady)
+                  ),
+                ],
+              ),
+              body: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: sortedPlayers.length,
+                      itemBuilder: (context, index) {
+                        final player = sortedPlayers[index];
+                        return PlayerTile(
+                          key: ValueKey(player['id']),
+                          player: player,
+                          isOwnPlayer: player['id'] == viewModel.deviceId,
+                          isHost: viewModel.isHost,
+                          hostId: viewModel.hostId,
+                          onKick:
+                              viewModel.isHost &&
+                                      player['id'] != viewModel.deviceId
+                                  ? () => _confirmKick(
+                                    context,
+                                    viewModel,
+                                    player['id'],
+                                    player['name'],
+                                  )
+                                  : null,
+                          onNameChange:
+                              player['id'] == viewModel.deviceId
+                                  ? () => viewModel.confirmNameChangeDialog(
+                                    context,
+                                    player['name'],
+                                  )
+                                  : null,
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
                       ElevatedButton(
-                        onPressed: viewModel.updateStatusStarted,
-                        child: const Text('Spiel starten'),
+                        onPressed: () => viewModel.toggleReadyStatus(),
+                        child: Text(
+                          viewModel.isReady ? 'Nicht bereit' : 'Bereit',
+                        ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-              ],
+                      if (viewModel.isHost && viewModel.everyoneReady)
+                        ElevatedButton(
+                          onPressed: viewModel.updateStatusStarted,
+                          child: const Text('Spiel starten'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           );
         },
@@ -163,8 +184,10 @@ class LobbyScreen extends StatelessWidget {
     if (!context.mounted) return;
 
     if (shouldLeave) {
+      hasLeft = true;
       await viewModel.leaveLobby();
       if (context.mounted) {
+        showNeutralSnackbar(context, 'Du hast die Lobby verlassen.');
         context.go('/');
       }
     }
@@ -203,38 +226,5 @@ class LobbyScreen extends StatelessWidget {
     if (shouldKick) {
       await viewModel.kickPlayer(playerId);
     }
-  }
-
-  Future<void> _showNameChangeDialog(
-    BuildContext context,
-    LobbyViewModel viewModel,
-    String playerId,
-  ) async {
-    final controller = TextEditingController();
-
-    final result = await showDialog<String>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Name ändern'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(hintText: 'Neuer Name'),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Abbrechen'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, controller.text),
-                child: const Text('Ändern'),
-              ),
-            ],
-          ),
-    );
-
-    if (!context.mounted || result == null || result.trim().isEmpty) return;
-    await viewModel.updatePlayerName(context, result.trim());
   }
 }
