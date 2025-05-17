@@ -6,6 +6,7 @@ class PlayerTile extends StatelessWidget {
   final Map<String, dynamic> player;
   final bool isHost;
   final bool isOwnPlayer;
+  final String? hostId;
   final VoidCallback? onKick;
   final VoidCallback? onNameChange;
 
@@ -14,6 +15,7 @@ class PlayerTile extends StatelessWidget {
     required this.player,
     required this.isHost,
     required this.isOwnPlayer,
+    required this.hostId,
     this.onKick,
     this.onNameChange,
   });
@@ -21,20 +23,18 @@ class PlayerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isReady = player['isReady'] == true;
+    final isPlayerHost = player['id'] == hostId;
 
     final point = Icon(
-      isHost ? (isReady ? Icons.circle : Icons.circle_outlined) : Icons.circle,
-      color:
-          isHost
-              ? Colors.blue
-              : isReady
-              ? Colors.green
-              : Colors.red,
+      isPlayerHost
+          ? (isReady ? Icons.circle : Icons.circle_outlined)
+          : (isReady ? Icons.circle : Icons.circle_outlined),
+      color: isPlayerHost ? Colors.blue : (isReady ? Colors.green : Colors.red),
       size: 12,
     );
 
     final crown =
-        isHost
+        isPlayerHost
             ? const Padding(
               padding: EdgeInsets.only(left: 8.0),
               child: Icon(

@@ -54,6 +54,7 @@ class LobbyViewModel extends ChangeNotifier {
   }
 
   void _listenToPlayers() {
+    _playerStreamSub?.cancel();
     _playerStreamSub = _lobbyRef.snapshots().listen((snapshot) async {
       _players =
           snapshot.docs
@@ -155,12 +156,20 @@ class LobbyViewModel extends ChangeNotifier {
           ),
     );
 
-    if (!context.mounted) return;
-    if (newName == null || newName.isEmpty || newName == currentName) return;
+    if (!context.mounted ||
+        newName == null ||
+        newName.isEmpty ||
+        newName == currentName) {
+      return;
+    }
 
-    final nameExists = players.any((p) => p['name'] == newName);
+    final nameExists = players.any(
+      (p) =>
+          p['name'].toString().toLowerCase() == newName.toLowerCase() &&
+          p['id'] != deviceId,
+    );
     if (nameExists) {
-      showRedSnackbar(context, 'Name existiert bereits');
+      showRedSnackbar(context, 'Name existiert bereits in der Lobby');
       return;
     }
 
@@ -171,12 +180,18 @@ class LobbyViewModel extends ChangeNotifier {
     try {
       await LobbyService.updatePlayerName(_lobbyId, _deviceId, newName);
       _playerName = newName;
+
+      final updatedDoc = await _lobbyRef.doc(_deviceId).get();
+      final updatedPlayer = updatedDoc.data() as Map<String, dynamic>;
+      _players.removeWhere((p) => p['id'] == _deviceId);
+      _players.add(updatedPlayer);
       notifyListeners();
+
       if (!context.mounted) return;
       showGreenSnackbar(context, 'Name erfolgreich geändert');
     } catch (e) {
       if (!context.mounted) return;
-      showRedSnackbar(context, 'Fehler: \${e.toString()}');
+      showRedSnackbar(context, 'Fehler: ${e.toString()}');
     }
   }
 

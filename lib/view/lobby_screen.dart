@@ -80,9 +80,11 @@ class LobbyScreen extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final player = viewModel.players[index];
                       return PlayerTile(
+                        key: ValueKey(player['id']),
                         player: player,
                         isOwnPlayer: player['id'] == viewModel.deviceId,
-                        isHost: player['id'] == viewModel.hostId,
+                        isHost: viewModel.isHost,
+                        hostId: viewModel.hostId,
                         onKick:
                             viewModel.isHost &&
                                     player['id'] != viewModel.deviceId

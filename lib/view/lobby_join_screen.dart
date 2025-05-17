@@ -3,7 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jugend_app/model/reconnect_data.dart';
+import 'package:jugend_app/services/lobby_service.dart';
 import 'package:jugend_app/services/reconnect_service.dart';
+import 'package:jugend_app/helpers/snackbar_helper.dart';
 
 class LobbyJoinScreen extends StatefulWidget {
   const LobbyJoinScreen({super.key});
@@ -27,6 +29,13 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
     final name = _nameController.text.trim();
     final lobbyId = _lobbyIdController.text.trim();
     if (name.isEmpty || lobbyId.isEmpty) return;
+
+    final nameExists = await LobbyService.isNameTaken(lobbyId, name);
+    if (nameExists) {
+      if (!mounted) return;
+      showRedSnackbar(context, 'Name existiert bereits in der Lobby');
+      return;
+    }
 
     const gameType = 'Impostor'; // später auswählbar machen
 

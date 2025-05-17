@@ -32,12 +32,13 @@ class LobbyService {
     required String deviceId,
     required bool isHost,
   }) async {
-    await playersRef(lobbyId).add({
+    await playersRef(lobbyId).doc(deviceId).set({
       'name': name,
       'deviceId': deviceId,
       'isHost': isHost,
       'isReady': false,
       'joinedAt': FieldValue.serverTimestamp(),
+      'id': deviceId,
     });
   }
 
@@ -46,13 +47,10 @@ class LobbyService {
     String deviceId,
     String newName,
   ) async {
-    final snapshot =
-        await playersRef(
-          lobbyId,
-        ).where('deviceId', isEqualTo: deviceId).limit(1).get();
-    if (snapshot.docs.isNotEmpty) {
-      await snapshot.docs.first.reference.update({'name': newName});
-    }
+    await playersRef(lobbyId).doc(deviceId).set({
+      'name': newName,
+      'id': deviceId,
+    }, SetOptions(merge: true));
   }
 
   static Future<DocumentSnapshot> getLobbySnapshot(String lobbyId) async {
