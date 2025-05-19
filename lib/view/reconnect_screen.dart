@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jugend_app/services/reconnect_service.dart';
 import 'package:jugend_app/helpers/device_id_helper.dart';
-import 'package:jugend_app/view/widgets/reconnect_dialog.dart';
-import 'package:jugend_app/model/reconnect_data.dart';
+import 'package:jugend_app/view/lobby_view_model.dart';
 
 class ReconnectScreen extends StatefulWidget {
   const ReconnectScreen({super.key});
@@ -16,6 +15,8 @@ class ReconnectScreen extends StatefulWidget {
 
 class _ReconnectScreenState extends State<ReconnectScreen> {
   final ReconnectService _reconnectService = ReconnectService();
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -24,38 +25,53 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
   }
 
   Future<void> _checkReconnect() async {
-    final deviceId = await DeviceIdHelper.getSafeDeviceId();
-    final reconnectData = await _reconnectService.getReconnectData(deviceId);
+    try {
+      final deviceId = await DeviceIdHelper.getSafeDeviceId();
+      final reconnectData = await _reconnectService.getReconnectData(deviceId);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (reconnectData != null) {
-      _showReconnectDialog(reconnectData);
-    } else {
-      context.go('/game-selection');
+      if (reconnectData != null) {
+        final viewModel = LobbyViewModel();
+        await viewModel.handleReconnect(context, reconnectData);
+      } else {
+        if (!mounted) return;
+        context.go('/');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Fehler beim Verbinden: ${e.toString()}';
+        _isLoading = false;
+      });
     }
-  }
-
-  void _showReconnectDialog(ReconnectData data) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => ReconnectDialog(
-            onRejoin: () {
-              Navigator.of(context).pop();
-              context.go('/lobby', extra: data);
-            },
-            onCancel: () {
-              Navigator.of(context).pop();
-              context.go('/game-selection');
-            },
-          ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return Scaffold(
+      body: Center(
+        child:
+            _isLoading
+                ? const CircularProgressIndicator()
+                : _error != null
+                ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => context.go('/game-selection'),
+                      child: const Text('Zurück zur Spielauswahl'),
+                    ),
+                  ],
+                )
+                : const CircularProgressIndicator(),
+      ),
+    );
   }
 }

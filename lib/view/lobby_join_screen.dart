@@ -30,6 +30,14 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
     final lobbyId = _lobbyIdController.text.trim();
     if (name.isEmpty || lobbyId.isEmpty) return;
 
+    // Prüfe, ob die Lobby existiert
+    final exists = await LobbyService.lobbyExists(lobbyId);
+    if (!exists) {
+      if (!mounted) return;
+      showRedSnackbar(context, 'Diese Lobby existiert nicht mehr!');
+      return;
+    }
+
     final nameExists = await LobbyService.isNameTaken(lobbyId, name);
     if (nameExists) {
       if (!mounted) return;

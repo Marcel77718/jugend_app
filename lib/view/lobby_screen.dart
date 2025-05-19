@@ -47,6 +47,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
             );
           }
 
+          // Clients hören auf settingsStarted
+          if (!viewModel.isHost) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              viewModel.listenForSettingsStart(context);
+            });
+          }
+
           final isKicked =
               viewModel.players.isNotEmpty &&
               !viewModel.players.any((p) => p['id'] == viewModel.deviceId);
@@ -78,7 +85,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => _handleBackPressed(context, viewModel),
                 ),
-                title: Text('${viewModel.gameType} Lobby'),
+                title: Text('Lobby'),
                 actions: [
                   Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -122,6 +129,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     player['name'],
                                   )
                                   : null,
+                          onHostTransfer:
+                              viewModel.isHost &&
+                                      player['id'] != viewModel.deviceId
+                                  ? () => viewModel.confirmHostTransferDialog(
+                                    context,
+                                    player['id'],
+                                    player['name'],
+                                  )
+                                  : null,
                         );
                       },
                     ),
@@ -138,7 +154,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       if (viewModel.isHost && viewModel.everyoneReady)
                         ElevatedButton(
-                          onPressed: viewModel.updateStatusStarted,
+                          onPressed: () => viewModel.startSettings(context),
                           child: const Text('Spiel starten'),
                         ),
                     ],

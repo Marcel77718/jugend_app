@@ -9,6 +9,7 @@ class PlayerTile extends StatelessWidget {
   final String? hostId;
   final VoidCallback? onKick;
   final VoidCallback? onNameChange;
+  final VoidCallback? onHostTransfer;
 
   const PlayerTile({
     super.key,
@@ -18,6 +19,7 @@ class PlayerTile extends StatelessWidget {
     required this.hostId,
     this.onKick,
     this.onNameChange,
+    this.onHostTransfer,
   });
 
   @override
@@ -61,6 +63,19 @@ class PlayerTile extends StatelessWidget {
             )
             : const SizedBox.shrink();
 
+    final hostTransferButton =
+        onHostTransfer != null
+            ? IconButton(
+              icon: const Icon(
+                Icons.emoji_events,
+                size: 16,
+                color: Colors.amber,
+              ),
+              tooltip: 'Host übertragen',
+              onPressed: onHostTransfer,
+            )
+            : const SizedBox.shrink();
+
     return ListTile(
       leading: point,
       title: Row(
@@ -75,6 +90,7 @@ class PlayerTile extends StatelessWidget {
           ),
           crown,
           nameEdit,
+          hostTransferButton,
           kickButton,
         ],
       ),
