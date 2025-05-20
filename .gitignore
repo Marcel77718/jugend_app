@@ -50,3 +50,4 @@ build/
 .idea/
 .packages
 pubspec.lock
+lib.zip
