@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:jugend_app/services/reconnect_service.dart';
 import 'package:jugend_app/helpers/device_id_helper.dart';
 import 'package:jugend_app/view/lobby_view_model.dart';
+import 'package:jugend_app/view/widgets/reconnect_dialog.dart';
 
 class ReconnectScreen extends StatefulWidget {
   const ReconnectScreen({super.key});
@@ -32,8 +33,24 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
       if (!mounted) return;
 
       if (reconnectData != null) {
-        final viewModel = LobbyViewModel();
-        await viewModel.handleReconnect(context, reconnectData);
+        final result = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (context) => ReconnectDialog(
+                onRejoin: () => Navigator.of(context).pop(true),
+                onCancel: () => Navigator.of(context).pop(false),
+              ),
+        );
+        if (!mounted) return;
+        if (result == true) {
+          final viewModel = LobbyViewModel();
+          await viewModel.handleReconnect(context, reconnectData);
+        } else {
+          await _reconnectService.clearReconnectData(deviceId);
+          if (!mounted) return;
+          context.go('/');
+        }
       } else {
         if (!mounted) return;
         context.go('/');

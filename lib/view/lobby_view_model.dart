@@ -70,6 +70,9 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       });
     }
 
+    // Setze beim Initialisieren des ViewModels standardmäßig den Stage auf 'lobby'
+    await updateStageForCurrentScreen('lobby');
+
     _listenToPlayers();
     _viewModelInitialized = true;
     notifyListeners();

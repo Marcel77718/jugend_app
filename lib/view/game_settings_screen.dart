@@ -10,6 +10,9 @@ class GameSettingsScreen extends StatelessWidget {
     return Consumer<LobbyViewModel>(
       builder: (context, viewModel, _) {
         if (viewModel.isHost) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            viewModel.updateStageForCurrentScreen('settings');
+          });
           // Host sieht Einstellungen (Platzhalter)
           return Scaffold(
             appBar: AppBar(title: const Text('Spieleinstellungen')),
@@ -31,6 +34,9 @@ class GameSettingsScreen extends StatelessWidget {
             ),
           );
         } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            viewModel.updateStageForCurrentScreen('settings');
+          });
           // Clients sehen eine Warteanimation
           WidgetsBinding.instance.addPostFrameCallback((_) {
             viewModel.listenForGameStart(context);
