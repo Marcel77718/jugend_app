@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:jugend_app/services/reconnect_service.dart';
-import 'package:jugend_app/helpers/device_id_helper.dart';
-import 'package:jugend_app/view/lobby_view_model.dart';
-import 'package:jugend_app/view/widgets/reconnect_dialog.dart';
+import 'package:jugend_app/data/services/reconnect_service.dart';
+import 'package:jugend_app/data/services/device_id_helper.dart';
+import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
+import 'package:jugend_app/presentation/dialogs/reconnect_dialog.dart';
 
 class ReconnectScreen extends StatefulWidget {
   const ReconnectScreen({super.key});

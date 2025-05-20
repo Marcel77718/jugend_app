@@ -1,4 +1,4 @@
-// 📁 Datei: lib/model/game_type.dart
+// 📁 Datei: lib/data/models/game_type.dart
 
 enum GameType { imposter, werwolf, palermo }
 

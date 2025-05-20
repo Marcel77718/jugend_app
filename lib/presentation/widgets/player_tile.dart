@@ -1,4 +1,4 @@
-// Datei: lib/view/widgets/player_tile.dart
+// Datei: lib/presentation/widgets/player_tile.dart
 
 import 'package:flutter/material.dart';
 

@@ -1,17 +1,17 @@
 // Datei: lib/router.dart
 
 import 'package:go_router/go_router.dart';
-import 'package:jugend_app/view/home_screen.dart';
-import 'package:jugend_app/view/lobby_hub_screen.dart';
-import 'package:jugend_app/view/lobby_create_screen.dart';
-import 'package:jugend_app/view/lobby_join_screen.dart';
-import 'package:jugend_app/view/lobby_screen.dart';
-import 'package:jugend_app/model/reconnect_data.dart';
-import 'package:jugend_app/view/reconnect_screen.dart';
-import 'package:jugend_app/view/game_screen.dart';
-import 'package:jugend_app/view/game_settings_screen.dart';
+import 'package:jugend_app/presentation/screens/home_screen.dart';
+import 'package:jugend_app/presentation/screens/lobby_hub_screen.dart';
+import 'package:jugend_app/presentation/screens/lobby_create_screen.dart';
+import 'package:jugend_app/presentation/screens/lobby_join_screen.dart';
+import 'package:jugend_app/presentation/screens/lobby_screen.dart';
+import 'package:jugend_app/data/models/reconnect_data.dart';
+import 'package:jugend_app/presentation/screens/reconnect_screen.dart';
+import 'package:jugend_app/presentation/screens/game_screen.dart';
+import 'package:jugend_app/presentation/screens/game_settings_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:jugend_app/view/lobby_view_model.dart';
+import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/reconnect',

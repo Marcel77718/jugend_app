@@ -3,8 +3,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:jugend_app/model/reconnect_data.dart';
-import 'package:jugend_app/services/reconnect_service.dart';
+import 'package:jugend_app/data/models/reconnect_data.dart';
+import 'package:jugend_app/data/services/reconnect_service.dart';
 
 class LobbyCreateScreen extends StatefulWidget {
   const LobbyCreateScreen({super.key});

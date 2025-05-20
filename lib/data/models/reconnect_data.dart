@@ -1,4 +1,4 @@
-// Datei: lib/model/reconnect_data.dart
+// Datei: lib/data/models/reconnect_data.dart
 
 class ReconnectData {
   final String lobbyId;

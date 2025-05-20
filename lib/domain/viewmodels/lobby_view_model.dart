@@ -3,11 +3,11 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:jugend_app/helpers/device_id_helper.dart';
-import 'package:jugend_app/helpers/snackbar_helper.dart';
-import 'package:jugend_app/services/lobby_service.dart';
-import 'package:jugend_app/model/reconnect_data.dart';
-import 'package:jugend_app/services/reconnect_service.dart';
+import 'package:jugend_app/data/services/device_id_helper.dart';
+import 'package:jugend_app/core/snackbar_helper.dart';
+import 'package:jugend_app/data/services/lobby_service.dart';
+import 'package:jugend_app/data/models/reconnect_data.dart';
+import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:go_router/go_router.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {

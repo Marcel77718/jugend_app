@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:jugend_app/helpers/snackbar_helper.dart';
-import 'package:jugend_app/view/lobby_view_model.dart';
-import 'package:jugend_app/view/widgets/player_tile.dart';
+import 'package:jugend_app/core/snackbar_helper.dart';
+import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
+import 'package:jugend_app/presentation/widgets/player_tile.dart';
 
 class LobbyScreen extends StatefulWidget {
   final String lobbyId;

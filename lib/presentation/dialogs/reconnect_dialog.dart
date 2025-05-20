@@ -1,4 +1,4 @@
-// Datei: lib/view/widgets/reconnect_dialog.dart
+// Datei: lib/presentation/dialogs/reconnect_dialog.dart
 
 import 'package:flutter/material.dart';
 

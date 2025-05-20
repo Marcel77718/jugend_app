@@ -1,4 +1,4 @@
-// 📁 Datei: lib/model/player.dart
+// 📁 Datei: lib/data/models/player.dart
 
 class Player {
   final String name;
@@ -30,5 +30,6 @@ class Player {
     'name': name,
     'isHost': isHost,
     'isReady': isReady,
+    'deviceId': deviceId,
   };
 }

@@ -1,9 +1,9 @@
-// Datei: lib/services/reconnect_service.dart
+// Datei: lib/data/services/reconnect_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:jugend_app/helpers/device_id_helper.dart';
-import 'package:jugend_app/model/reconnect_data.dart';
-import 'package:jugend_app/services/lobby_service.dart';
+import 'package:jugend_app/data/services/device_id_helper.dart';
+import 'package:jugend_app/data/models/reconnect_data.dart';
+import 'package:jugend_app/data/services/lobby_service.dart';
 
 class ReconnectService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

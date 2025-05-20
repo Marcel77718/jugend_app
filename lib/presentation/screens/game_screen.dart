@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:jugend_app/view/lobby_view_model.dart';
+import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 
 class GameScreen extends StatelessWidget {
   const GameScreen({super.key});

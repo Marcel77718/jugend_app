@@ -1,7 +1,7 @@
-// 📁 Datei: lib/helpers/snackbar_helper.dart
+// 📁 Datei: lib/core/snackbar_helper.dart
 
 import 'package:flutter/material.dart';
-import 'package:jugend_app/helpers/app_constants.dart';
+import 'package:jugend_app/core/app_texts.dart';
 
 class SnackbarHelper {
   static void show(BuildContext context, String message) {
