@@ -6,6 +6,7 @@ import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:jugend_app/data/services/lobby_service.dart';
 import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:jugend_app/core/snackbar_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class LobbyJoinScreen extends StatefulWidget {
   const LobbyJoinScreen({super.key});
@@ -34,14 +35,14 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
     final exists = await LobbyService.lobbyExists(lobbyId);
     if (!exists) {
       if (!mounted) return;
-      showRedSnackbar(context, 'Diese Lobby existiert nicht mehr!');
+      showRedSnackbar(context, AppLocalizations.of(context)!.errorLobbyInvalid);
       return;
     }
 
     final nameExists = await LobbyService.isNameTaken(lobbyId, name);
     if (nameExists) {
       if (!mounted) return;
-      showRedSnackbar(context, 'Name existiert bereits in der Lobby');
+      showRedSnackbar(context, AppLocalizations.of(context)!.errorNameTaken);
       return;
     }
 
@@ -63,9 +64,10 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Spiel beitreten'),
+        title: Text(l10n.titleLeaveLobby),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/lobbies'),
@@ -78,24 +80,22 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
           children: [
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Dein Name',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.labelYourName,
+                border: const OutlineInputBorder(),
+                hintText: l10n.hintNameInput,
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _lobbyIdController,
-              decoration: const InputDecoration(
-                labelText: 'Lobby-ID',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.labelLobbyId,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _joinLobby,
-              child: const Text('Beitreten'),
-            ),
+            ElevatedButton(onPressed: _joinLobby, child: Text(l10n.labelSave)),
           ],
         ),
       ),

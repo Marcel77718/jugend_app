@@ -5,9 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:jugend_app/data/services/device_id_helper.dart';
 import 'package:jugend_app/core/snackbar_helper.dart';
-import 'package:jugend_app/data/services/lobby_service.dart';
+import 'package:jugend_app/data/repositories/lobby_repository.dart';
 import 'package:jugend_app/data/models/reconnect_data.dart';
-import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:go_router/go_router.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
@@ -26,7 +25,10 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   final _firestore = FirebaseFirestore.instance;
   late final CollectionReference _lobbyRef;
   StreamSubscription? _playerStreamSub;
-  final ReconnectService _reconnectService = ReconnectService();
+  final ILobbyRepository _lobbyRepository;
+
+  LobbyViewModel({ILobbyRepository? lobbyRepository})
+    : _lobbyRepository = lobbyRepository ?? LobbyRepository();
 
   Future<void> initialize({
     required String lobbyId,
@@ -48,7 +50,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _startActivityTimer();
 
     // Speichere Reconnect-Daten
-    await _reconnectService.registerReconnectData(
+    await _lobbyRepository.saveReconnectData(
+      _deviceId,
       ReconnectData(
         lobbyId: _lobbyId,
         playerName: _playerName,
@@ -82,8 +85,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _activityTimer?.cancel();
     _activityTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (!_isInBackground) {
-        LobbyService.updatePlayerActivity(_lobbyId, _deviceId);
-        LobbyService.updateLobbyActivity(_lobbyId);
+        _lobbyRepository.updatePlayerActivity(_lobbyId, _deviceId);
+        _lobbyRepository.updateLobbyActivity(_lobbyId);
       }
     });
   }
@@ -98,8 +101,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         _isInBackground = false;
         // Update Aktivität wenn App wieder im Vordergrund ist
-        LobbyService.updatePlayerActivity(_lobbyId, _deviceId);
-        LobbyService.updateLobbyActivity(_lobbyId);
+        _lobbyRepository.updatePlayerActivity(_lobbyId, _deviceId);
+        _lobbyRepository.updateLobbyActivity(_lobbyId);
         break;
       case AppLifecycleState.detached:
         // App wird komplett geschlossen
@@ -264,7 +267,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     final doc = await _firestore.collection('lobbies').doc(data.lobbyId).get();
     if (!doc.exists) {
       // Lobby existiert nicht mehr, lösche Reconnect-Daten und leite auf Startseite
-      await _reconnectService.clearReconnectData(data.lobbyId);
+      await _lobbyRepository.clearReconnectData(data.lobbyId);
       if (!context.mounted) return;
       GoRouter.of(context).go('/');
       return;
@@ -285,7 +288,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> leaveLobby() async {
     try {
       await _lobbyRef.doc(_deviceId).delete();
-      await _reconnectService.clearReconnectData(_deviceId);
+      await _lobbyRepository.clearReconnectData(_deviceId);
 
       // Host verlässt die Lobby: Rolle zufällig übertragen, aber nur solange settingsStarted nicht true ist
       final doc = await _firestore.collection('lobbies').doc(_lobbyId).get();
@@ -379,7 +382,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> updatePlayerName(BuildContext context, String newName) async {
     try {
-      await LobbyService.updatePlayerName(_lobbyId, _deviceId, newName);
+      await _lobbyRepository.updatePlayerName(_lobbyId, _deviceId, newName);
       _playerName = newName;
 
       final updatedDoc = await _lobbyRef.doc(_deviceId).get();
@@ -422,12 +425,18 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   void startGame(BuildContext context) async {
     // Host setzt gameStarted auf true, Clients lauschen darauf
     final docRef = _firestore.collection('lobbies').doc(_lobbyId);
+    final reconnectData = ReconnectData(
+      lobbyId: _lobbyId,
+      playerName: _playerName,
+      isHost: _isHost,
+      gameType: _gameType,
+    );
     if (_isHost) {
       await docRef.update({'gameStarted': true, 'lobbyStage': 'game'});
       if (!context.mounted) return;
-      GoRouter.of(context).go('/game');
+      GoRouter.of(context).go('/game', extra: reconnectData);
     } else {
-      GoRouter.of(context).go('/game-settings');
+      GoRouter.of(context).go('/game-settings', extra: reconnectData);
     }
   }
 

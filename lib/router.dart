@@ -12,56 +12,116 @@ import 'package:jugend_app/presentation/screens/game_screen.dart';
 import 'package:jugend_app/presentation/screens/game_settings_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
+import 'package:jugend_app/data/repositories/lobby_repository.dart';
+import 'package:flutter/material.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/reconnect',
   routes: [
     GoRoute(
       path: '/reconnect',
-      builder: (context, state) => const ReconnectScreen(),
+      pageBuilder:
+          (context, state) => _fadeTransitionPage(const ReconnectScreen()),
     ),
-    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/',
+      pageBuilder: (context, state) => _fadeTransitionPage(const HomeScreen()),
+    ),
     GoRoute(
       path: '/lobbies',
-      builder: (context, state) => const LobbyHubScreen(),
+      pageBuilder:
+          (context, state) => _fadeTransitionPage(const LobbyHubScreen()),
     ),
     GoRoute(
       path: '/lobbies/create',
-      builder: (context, state) => const LobbyCreateScreen(),
+      pageBuilder:
+          (context, state) => _fadeTransitionPage(const LobbyCreateScreen()),
     ),
     GoRoute(
       path: '/lobbies/join',
-      builder: (context, state) => const LobbyJoinScreen(),
+      pageBuilder:
+          (context, state) => _fadeTransitionPage(const LobbyJoinScreen()),
     ),
     GoRoute(
       path: '/lobby',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final data = state.extra as ReconnectData;
-        return LobbyScreen(
-          lobbyId: data.lobbyId,
-          playerName: data.playerName,
-          isHost: data.isHost,
-          gameType: data.gameType,
+        return _fadeTransitionPage(
+          ChangeNotifierProvider(
+            create:
+                (_) =>
+                    LobbyViewModel(lobbyRepository: LobbyRepository())
+                      ..initialize(
+                        lobbyId: data.lobbyId,
+                        playerName: data.playerName,
+                        isHost: data.isHost,
+                        gameType: data.gameType,
+                      ),
+            child: LobbyScreen(
+              lobbyId: data.lobbyId,
+              playerName: data.playerName,
+              isHost: data.isHost,
+              gameType: data.gameType,
+            ),
+          ),
         );
       },
     ),
-    GoRoute(path: '/game', builder: (context, state) => const GameScreen()),
+    GoRoute(
+      path: '/game',
+      pageBuilder: (context, state) {
+        final data = state.extra;
+        if (data is! ReconnectData) {
+          // Fallback: Weiterleitung auf Startseite
+          return _fadeTransitionPage(const HomeScreen());
+        }
+        return _fadeTransitionPage(
+          ChangeNotifierProvider(
+            create:
+                (_) =>
+                    LobbyViewModel(lobbyRepository: LobbyRepository())
+                      ..initialize(
+                        lobbyId: data.lobbyId,
+                        playerName: data.playerName,
+                        isHost: data.isHost,
+                        gameType: data.gameType,
+                      ),
+            child: const GameScreen(),
+          ),
+        );
+      },
+    ),
     GoRoute(
       path: '/game-settings',
-      builder: (context, state) {
-        final data = state.extra as ReconnectData;
-        return ChangeNotifierProvider(
-          create:
-              (_) =>
-                  LobbyViewModel()..initialize(
-                    lobbyId: data.lobbyId,
-                    playerName: data.playerName,
-                    isHost: data.isHost,
-                    gameType: data.gameType,
-                  ),
-          child: const GameSettingsScreen(),
+      pageBuilder: (context, state) {
+        final data = state.extra;
+        if (data is! ReconnectData) {
+          return _fadeTransitionPage(const HomeScreen());
+        }
+        return _fadeTransitionPage(
+          ChangeNotifierProvider(
+            create:
+                (_) =>
+                    LobbyViewModel(lobbyRepository: LobbyRepository())
+                      ..initialize(
+                        lobbyId: data.lobbyId,
+                        playerName: data.playerName,
+                        isHost: data.isHost,
+                        gameType: data.gameType,
+                      ),
+            child: const GameSettingsScreen(),
+          ),
         );
       },
     ),
   ],
 );
+
+CustomTransitionPage _fadeTransitionPage(Widget child) {
+  return CustomTransitionPage(
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+  );
+}

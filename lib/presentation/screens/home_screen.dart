@@ -2,43 +2,62 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('GatherUP')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: [
-            _HubTile(
-              label: 'Games',
-              icon: Icons.videogame_asset,
-              onTap: () => _showComingSoon(context),
+      appBar: AppBar(title: Text(l10n.appTitle)),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = 2;
+          if (constraints.maxWidth < 500) {
+            crossAxisCount = 1;
+          } else if (constraints.maxWidth > 900) {
+            crossAxisCount = 3;
+          }
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.1,
+              ),
+              itemCount: 4,
+              itemBuilder: (context, index) {
+                final tiles = [
+                  _HubTile(
+                    label: 'Games',
+                    icon: Icons.videogame_asset,
+                    onTap: () => _showComingSoon(context),
+                  ),
+                  _HubTile(
+                    label: l10n.labelPlayers,
+                    icon: Icons.group,
+                    onTap: () => context.go('/lobbies'),
+                  ),
+                  _HubTile(
+                    label: 'Freunde',
+                    icon: Icons.people_outline,
+                    onTap: () => _showComingSoon(context),
+                  ),
+                  _HubTile(
+                    label: 'Feedback',
+                    icon: Icons.feedback_outlined,
+                    onTap: () => _showComingSoon(context),
+                  ),
+                ];
+                return tiles[index];
+              },
             ),
-            _HubTile(
-              label: 'Lobbies',
-              icon: Icons.group,
-              onTap: () => context.go('/lobbies'),
-            ),
-            _HubTile(
-              label: 'Freunde',
-              icon: Icons.people_outline,
-              onTap: () => _showComingSoon(context),
-            ),
-            _HubTile(
-              label: 'Feedback',
-              icon: Icons.feedback_outlined,
-              onTap: () => _showComingSoon(context),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

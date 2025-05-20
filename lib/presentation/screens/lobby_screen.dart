@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/presentation/widgets/player_tile.dart';
+import 'package:jugend_app/data/repositories/lobby_repository.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class LobbyScreen extends StatefulWidget {
   final String lobbyId;
@@ -30,15 +32,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ChangeNotifierProvider(
       create:
-          (_) =>
-              LobbyViewModel()..initialize(
-                lobbyId: widget.lobbyId,
-                playerName: widget.playerName,
-                isHost: widget.isHost,
-                gameType: widget.gameType,
-              ),
+          (_) => LobbyViewModel(lobbyRepository: LobbyRepository())..initialize(
+            lobbyId: widget.lobbyId,
+            playerName: widget.playerName,
+            isHost: widget.isHost,
+            gameType: widget.gameType,
+          ),
       child: Consumer<LobbyViewModel>(
         builder: (context, viewModel, _) {
           if (!viewModel.viewModelInitialized) {
@@ -85,82 +87,90 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => _handleBackPressed(context, viewModel),
                 ),
-                title: Text('Lobby'),
+                title: Text(l10n.appTitle),
                 actions: [
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Center(
                       child: Text(
-                        'ID: ${viewModel.lobbyId}',
+                        '${l10n.labelLobbyId}: ${viewModel.lobbyId}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
                 ],
               ),
-              body: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: sortedPlayers.length,
-                      itemBuilder: (context, index) {
-                        final player = sortedPlayers[index];
-                        return PlayerTile(
-                          key: ValueKey(player['id']),
-                          player: player,
-                          isOwnPlayer: player['id'] == viewModel.deviceId,
-                          isHost: viewModel.isHost,
-                          hostId: viewModel.hostId,
-                          onKick:
-                              viewModel.isHost &&
-                                      player['id'] != viewModel.deviceId
-                                  ? () => _confirmKick(
-                                    context,
-                                    viewModel,
-                                    player['id'],
-                                    player['name'],
-                                  )
-                                  : null,
-                          onNameChange:
-                              player['id'] == viewModel.deviceId
-                                  ? () => viewModel.confirmNameChangeDialog(
-                                    context,
-                                    player['name'],
-                                  )
-                                  : null,
-                          onHostTransfer:
-                              viewModel.isHost &&
-                                      player['id'] != viewModel.deviceId
-                                  ? () => viewModel.confirmHostTransferDialog(
-                                    context,
-                                    player['id'],
-                                    player['name'],
-                                  )
-                                  : null,
-                        );
-                      },
-                    ),
-                  ),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              body: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: Column(
                     children: [
-                      ElevatedButton(
-                        onPressed: () => viewModel.toggleReadyStatus(),
-                        child: Text(
-                          viewModel.isReady ? 'Nicht bereit' : 'Bereit',
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: sortedPlayers.length,
+                          itemBuilder: (context, index) {
+                            final player = sortedPlayers[index];
+                            return PlayerTile(
+                              key: ValueKey(player['id']),
+                              player: player,
+                              isOwnPlayer: player['id'] == viewModel.deviceId,
+                              isHost: viewModel.isHost,
+                              hostId: viewModel.hostId,
+                              onKick:
+                                  viewModel.isHost &&
+                                          player['id'] != viewModel.deviceId
+                                      ? () => _confirmKick(
+                                        context,
+                                        viewModel,
+                                        player['id'],
+                                        player['name'],
+                                      )
+                                      : null,
+                              onNameChange:
+                                  player['id'] == viewModel.deviceId
+                                      ? () => viewModel.confirmNameChangeDialog(
+                                        context,
+                                        player['name'],
+                                      )
+                                      : null,
+                              onHostTransfer:
+                                  viewModel.isHost &&
+                                          player['id'] != viewModel.deviceId
+                                      ? () =>
+                                          viewModel.confirmHostTransferDialog(
+                                            context,
+                                            player['id'],
+                                            player['name'],
+                                          )
+                                      : null,
+                            );
+                          },
                         ),
                       ),
-                      if (viewModel.isHost && viewModel.everyoneReady)
-                        ElevatedButton(
-                          onPressed: () => viewModel.startSettings(context),
-                          child: const Text('Spiel starten'),
-                        ),
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => viewModel.toggleReadyStatus(),
+                            child: Text(
+                              viewModel.isReady
+                                  ? l10n.labelNotReady
+                                  : l10n.labelReady,
+                            ),
+                          ),
+                          if (viewModel.isHost && viewModel.everyoneReady)
+                            ElevatedButton(
+                              onPressed: () => viewModel.startSettings(context),
+                              child: Text(l10n.labelStartGame),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                ],
+                ),
               ),
             ),
           );
