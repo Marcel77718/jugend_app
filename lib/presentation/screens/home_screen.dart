@@ -50,7 +50,7 @@ class HomeScreen extends StatelessWidget {
                   _HubTile(
                     label: 'Feedback',
                     icon: Icons.feedback_outlined,
-                    onTap: () => _showComingSoon(context),
+                    onTap: () => context.go('/feedback'),
                   ),
                 ];
                 return tiles[index];

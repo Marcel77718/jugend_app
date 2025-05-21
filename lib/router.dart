@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/data/repositories/lobby_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:jugend_app/presentation/screens/feedback_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/reconnect',
@@ -113,6 +114,11 @@ final GoRouter appRouter = GoRouter(
           ),
         );
       },
+    ),
+    GoRoute(
+      path: '/feedback',
+      pageBuilder:
+          (context, state) => _fadeTransitionPage(const FeedbackScreen()),
     ),
   ],
 );

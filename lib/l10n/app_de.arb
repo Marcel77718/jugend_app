@@ -29,5 +29,16 @@
   "labelSave": "Speichern",
   "@labelSave": {"description": "Button-Text für Speichern"},
   "labelCancel": "Abbrechen",
-  "@labelCancel": {"description": "Button-Text für Abbrechen"}
+  "@labelCancel": {"description": "Button-Text für Abbrechen"},
+  "feedbackTitle": "Feedback",
+  "feedbackFormTitle": "Dein Feedback",
+  "feedbackName": "Dein Name (optional)",
+  "feedbackMessage": "Nachricht",
+  "feedbackMessageRequired": "Bitte gib eine Nachricht ein.",
+  "feedbackRating": "Bewertung:",
+  "feedbackSubmit": "Absenden",
+  "feedbackSuccess": "Danke für dein Feedback!",
+  "feedbackListTitle": "Letzte Rückmeldungen",
+  "feedbackListEmpty": "Noch kein Feedback vorhanden.",
+  "feedbackAnonymous": "Anonym"
 } 

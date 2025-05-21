@@ -29,5 +29,16 @@
   "labelSave": "Save",
   "@labelSave": {"description": "Button text for save"},
   "labelCancel": "Cancel",
-  "@labelCancel": {"description": "Button text for cancel"}
+  "@labelCancel": {"description": "Button text for cancel"},
+  "feedbackTitle": "Feedback",
+  "feedbackFormTitle": "Your Feedback",
+  "feedbackName": "Your name (optional)",
+  "feedbackMessage": "Message",
+  "feedbackMessageRequired": "Please enter a message.",
+  "feedbackRating": "Rating:",
+  "feedbackSubmit": "Submit",
+  "feedbackSuccess": "Thank you for your feedback!",
+  "feedbackListTitle": "Latest feedback",
+  "feedbackListEmpty": "No feedback yet.",
+  "feedbackAnonymous": "Anonymous"
 } 
