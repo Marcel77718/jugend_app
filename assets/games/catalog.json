@@ -1,0 +1,42 @@
+[
+  {
+    "id": "imposter",
+    "name": "Imposter",
+    "description": "Finde den Betrüger unter euch! Ein spannendes Social-Deduction-Spiel.",
+    "rules": "Die Spieler diskutieren und stimmen ab, wer der Imposter ist. Der Imposter versucht, unentdeckt zu bleiben.",
+    "roles": ["Imposter", "Crewmate"],
+    "iconName": "imposter.png"
+  },
+  {
+    "id": "werwolf",
+    "name": "Werwolf",
+    "description": "Das klassische Partyspiel: Wer ist der Werwolf im Dorf?",
+    "rules": "Tagsüber diskutieren die Dorfbewohner, nachts schlägt der Werwolf zu. Ziel: Werwölfe entlarven oder Dorf überleben.",
+    "roles": ["Werwolf", "Dorfbewohner", "Seherin", "Hexe"],
+    "iconName": "werwolf.png"
+  },
+  {
+    "id": "palermo",
+    "name": "Palermo",
+    "description": "Ein Mafia-ähnliches Spiel mit vielen Rollen und spannenden Nächten.",
+    "rules": "Die Mafia versucht, die Stadt zu übernehmen. Die Bürger versuchen, die Mafia zu entlarven.",
+    "roles": ["Mafia", "Bürger", "Kommissar", "Doktor"],
+    "iconName": "palermo.png"
+  },
+  {
+    "id": "codenames",
+    "name": "Codenames",
+    "description": "Wortspiel für Teams: Finde die richtigen Begriffe anhand von Hinweisen.",
+    "rules": "Zwei Teams geben Hinweise, um ihre Agenten zu finden. Vermeide den Attentäter!",
+    "roles": ["Agent", "Hinweisgeber", "Attentäter"],
+    "iconName": "codenames.png"
+  },
+  {
+    "id": "justone",
+    "name": "Just One",
+    "description": "Kooperatives Partyspiel: Gebt Hinweise, aber keine doppelten!",
+    "rules": "Ein Spieler errät ein Wort, die anderen geben Hinweise. Gleiche Hinweise werden gestrichen.",
+    "roles": ["Ratender", "Hinweisgeber"],
+    "iconName": "justone.png"
+  }
+] 

@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'package:jugend_app/core/feedback_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +21,7 @@ void main() async {
 
   runZonedGuarded(
     () {
-      runApp(const MyApp());
+      runApp(const ProviderScope(child: MyApp()));
     },
     (error, stack) {
       FeedbackService.instance.showError(error.toString());

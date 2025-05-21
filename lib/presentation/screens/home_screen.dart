@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
                   _HubTile(
                     label: 'Games',
                     icon: Icons.videogame_asset,
-                    onTap: () => _showComingSoon(context),
+                    onTap: () => context.go('/games'),
                   ),
                   _HubTile(
                     label: l10n.labelPlayers,

@@ -15,6 +15,8 @@ import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/data/repositories/lobby_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:jugend_app/presentation/screens/feedback_screen.dart';
+import 'package:jugend_app/presentation/screens/games_catalog_screen.dart';
+import 'package:jugend_app/presentation/screens/game_detail_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/reconnect',
@@ -119,6 +121,21 @@ final GoRouter appRouter = GoRouter(
       path: '/feedback',
       pageBuilder:
           (context, state) => _fadeTransitionPage(const FeedbackScreen()),
+    ),
+    GoRoute(
+      path: '/games',
+      pageBuilder:
+          (context, state) => _fadeTransitionPage(const GamesCatalogScreen()),
+    ),
+    GoRoute(
+      path: '/games/:id',
+      pageBuilder: (context, state) {
+        final id = state.pathParameters['id'];
+        if (id == null) {
+          return _fadeTransitionPage(const GamesCatalogScreen());
+        }
+        return _fadeTransitionPage(GameDetailScreen(gameId: id));
+      },
     ),
   ],
 );
