@@ -36,12 +36,13 @@ class GamesCatalogScreen extends ConsumerWidget {
           return LayoutBuilder(
             builder: (context, constraints) {
               int crossAxisCount = 2;
-              if (constraints.maxWidth > 900)
+              if (constraints.maxWidth > 900) {
                 crossAxisCount = 4;
-              else if (constraints.maxWidth > 600)
+              } else if (constraints.maxWidth > 600) {
                 crossAxisCount = 3;
-              else if (constraints.maxWidth < 400)
+              } else if (constraints.maxWidth < 400) {
                 crossAxisCount = 1;
+              }
               return GridView.builder(
                 padding: const EdgeInsets.all(16),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -88,7 +89,7 @@ class _GameCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.shadow.withOpacity(0.08),
+                    color: colorScheme.shadow.withAlpha((0.08 * 255).toInt()),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),

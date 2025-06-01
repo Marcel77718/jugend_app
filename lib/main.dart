@@ -9,19 +9,45 @@ import 'package:jugend_app/core/feedback_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+final localeProvider = StateProvider<Locale?>((ref) => const Locale('de'));
 
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FeedbackService.instance.showError(details.exceptionAsString());
-    FlutterError.presentError(details);
-  };
-
+void main() {
   runZonedGuarded(
-    () {
-      runApp(const ProviderScope(child: MyApp()));
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      bool firebaseInitError = false;
+      String? firebaseInitErrorMsg;
+
+      try {
+        if (Firebase.apps.isEmpty) {
+          if (kIsWeb) {
+            await Firebase.initializeApp(
+              options: DefaultFirebaseOptions.currentPlatform,
+            );
+          } else if (!Platform.isAndroid && !Platform.isIOS) {
+            await Firebase.initializeApp(
+              options: DefaultFirebaseOptions.currentPlatform,
+            );
+          } else {
+            await Firebase.initializeApp();
+          }
+        }
+      } catch (e) {
+        firebaseInitError = true;
+        firebaseInitErrorMsg = e.toString();
+      }
+
+      runApp(
+        ProviderScope(
+          child: MyApp(
+            firebaseInitError: firebaseInitError,
+            firebaseInitErrorMsg: firebaseInitErrorMsg,
+          ),
+        ),
+      );
     },
     (error, stack) {
       FeedbackService.instance.showError(error.toString());
@@ -29,11 +55,55 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends ConsumerWidget {
+  final bool firebaseInitError;
+  final String? firebaseInitErrorMsg;
+  const MyApp({
+    super.key,
+    this.firebaseInitError = false,
+    this.firebaseInitErrorMsg,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
+    if (firebaseInitError) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, color: Colors.red, size: 64),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Fehler bei der Verbindung zu Firebase!',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    firebaseInitErrorMsg ?? '',
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  const Text(
+                    'Bitte prüfe deine Internetverbindung, die Uhrzeit und die Google Play-Dienste auf deinem Gerät.',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return MaterialApp.router(
       title: 'GatherUp',
       debugShowCheckedModeBanner: false,
@@ -49,7 +119,7 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('de'), Locale('en')],
-      locale: const Locale('de'),
+      locale: locale,
       builder: (context, child) {
         return FeedbackListener(child: child!);
       },

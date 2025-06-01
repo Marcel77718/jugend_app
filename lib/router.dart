@@ -17,6 +17,50 @@ import 'package:flutter/material.dart';
 import 'package:jugend_app/presentation/screens/feedback_screen.dart';
 import 'package:jugend_app/presentation/screens/games_catalog_screen.dart';
 import 'package:jugend_app/presentation/screens/game_detail_screen.dart';
+import 'package:jugend_app/presentation/screens/auth_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
+import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
+import 'package:jugend_app/presentation/screens/profile_screen.dart';
+
+class AuthGuard extends StatelessWidget {
+  final Widget child;
+  const AuthGuard({required this.child, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return riverpod.Consumer(
+      builder: (context, ref, _) {
+        final auth = ref.watch(authViewModelProvider);
+        if (auth.status == AuthStatus.loading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (auth.status == AuthStatus.signedOut) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (ModalRoute.of(context)?.settings.name != '/auth') {
+              GoRouter.of(context).go('/auth');
+            }
+          });
+          return const SizedBox.shrink();
+        }
+        return child;
+      },
+    );
+  }
+}
+
+class FriendsScreen extends StatelessWidget {
+  const FriendsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Freunde')),
+      body: const Center(child: Text('Freunde-Feature kommt demnächst!')),
+    );
+  }
+}
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/reconnect',
@@ -136,6 +180,22 @@ final GoRouter appRouter = GoRouter(
         }
         return _fadeTransitionPage(GameDetailScreen(gameId: id));
       },
+    ),
+    GoRoute(
+      path: '/auth',
+      pageBuilder: (context, state) => _fadeTransitionPage(const AuthScreen()),
+    ),
+    GoRoute(
+      path: '/friends',
+      pageBuilder:
+          (context, state) =>
+              _fadeTransitionPage(AuthGuard(child: const FriendsScreen())),
+    ),
+    GoRoute(
+      path: '/profile',
+      pageBuilder:
+          (context, state) =>
+              _fadeTransitionPage(AuthGuard(child: const ProfileScreen())),
     ),
   ],
 );

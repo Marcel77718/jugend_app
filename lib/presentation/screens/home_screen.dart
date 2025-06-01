@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
+import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -10,75 +12,110 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.appTitle)),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          int crossAxisCount = 2;
-          if (constraints.maxWidth < 500) {
-            crossAxisCount = 1;
-          } else if (constraints.maxWidth > 900) {
-            crossAxisCount = 3;
-          }
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: GridView.builder(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.1,
-              ),
-              itemCount: 4,
-              itemBuilder: (context, index) {
-                final tiles = [
-                  _HubTile(
-                    label: 'Games',
-                    icon: Icons.videogame_asset,
-                    onTap: () => context.go('/games'),
+    return riverpod.Consumer(
+      builder: (context, ref, _) {
+        final auth = ref.watch(authViewModelProvider);
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(l10n.appTitle),
+            actions: [
+              if (auth.status == AuthStatus.signedIn)
+                IconButton(
+                  icon:
+                      auth.profile?.photoUrl != null
+                          ? CircleAvatar(
+                            backgroundImage: NetworkImage(
+                              auth.profile!.photoUrl!,
+                            ),
+                            radius: 16,
+                          )
+                          : const Icon(Icons.account_circle),
+                  tooltip: 'Profil',
+                  onPressed: () => context.go('/profile'),
+                ),
+            ],
+          ),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              int crossAxisCount = 2;
+              if (constraints.maxWidth < 500) {
+                crossAxisCount = 1;
+              } else if (constraints.maxWidth > 900) {
+                crossAxisCount = 3;
+              }
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: GridView.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.1,
                   ),
-                  _HubTile(
-                    label: l10n.labelPlayers,
-                    icon: Icons.group,
-                    onTap: () => context.go('/lobbies'),
-                  ),
-                  _HubTile(
-                    label: 'Freunde',
-                    icon: Icons.people_outline,
-                    onTap: () => _showComingSoon(context),
-                  ),
-                  _HubTile(
-                    label: 'Feedback',
-                    icon: Icons.feedback_outlined,
-                    onTap: () => context.go('/feedback'),
-                  ),
-                ];
-                return tiles[index];
-              },
-            ),
-          );
-        },
-      ),
+                  itemCount: 4,
+                  itemBuilder: (context, index) {
+                    final tiles = [
+                      _HubTile(
+                        label: 'Games',
+                        icon: Icons.videogame_asset,
+                        onTap: () => context.go('/games'),
+                      ),
+                      _HubTile(
+                        label: l10n.labelPlayers,
+                        icon: Icons.group,
+                        onTap: () => context.go('/lobbies'),
+                      ),
+                      _HubTile(
+                        label: 'Freunde',
+                        icon: Icons.people_outline,
+                        onTap: () => _onFriendsTap(context, auth),
+                      ),
+                      _HubTile(
+                        label: 'Feedback',
+                        icon: Icons.feedback_outlined,
+                        onTap: () => context.go('/feedback'),
+                      ),
+                    ];
+                    return tiles[index];
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
-  void _showComingSoon(BuildContext context) {
-    showDialog(
+  void _onFriendsTap(BuildContext context, AuthState auth) async {
+    if (auth.status == AuthStatus.signedIn) {
+      context.go('/friends');
+      return;
+    }
+    final result = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Noch nicht verfügbar'),
+            title: const Text('Login erforderlich'),
             content: const Text(
-              'Dieses Feature wird in einem zukünftigen Update verfügbar sein.',
+              'Dieses Feature funktioniert nur, wenn du eingeloggt bist. Jetzt einloggen?',
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Nein'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Ja, einloggen'),
               ),
             ],
           ),
     );
+    if (result == true) {
+      if (!context.mounted) return;
+      context.go('/auth');
+    }
   }
 }
 

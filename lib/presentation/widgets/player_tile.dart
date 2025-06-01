@@ -77,7 +77,24 @@ class PlayerTile extends StatelessWidget {
             : const SizedBox.shrink();
 
     return ListTile(
-      leading: point,
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundImage:
+                (player['photoUrl'] != null &&
+                        player['photoUrl'].toString().isNotEmpty)
+                    ? NetworkImage(player['photoUrl'])
+                    : const NetworkImage(
+                      'https://ui-avatars.com/api/?name=User',
+                    ),
+            child: null,
+          ),
+          const SizedBox(width: 6),
+          point,
+        ],
+      ),
       title: Row(
         children: [
           Expanded(

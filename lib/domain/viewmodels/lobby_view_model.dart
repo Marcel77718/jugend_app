@@ -8,6 +8,7 @@ import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:jugend_app/data/repositories/lobby_repository.dart';
 import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   late String _lobbyId;
@@ -60,10 +61,18 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       ),
     );
 
+    String? photoUrl;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      photoUrl = user?.photoURL;
+    } catch (_) {
+      photoUrl = null;
+    }
     await _lobbyRef.doc(_deviceId).set({
       'id': _deviceId,
       'name': _playerName,
       'isReady': false,
+      'photoUrl': photoUrl ?? '',
     });
 
     if (isHost) {
@@ -382,7 +391,15 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> updatePlayerName(BuildContext context, String newName) async {
     try {
+      String? photoUrl;
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        photoUrl = user?.photoURL;
+      } catch (_) {
+        photoUrl = null;
+      }
       await _lobbyRepository.updatePlayerName(_lobbyId, _deviceId, newName);
+      await _lobbyRef.doc(_deviceId).update({'photoUrl': photoUrl ?? ''});
       _playerName = newName;
 
       final updatedDoc = await _lobbyRef.doc(_deviceId).get();

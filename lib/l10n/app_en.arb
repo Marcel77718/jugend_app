@@ -40,5 +40,7 @@
   "feedbackSuccess": "Thank you for your feedback!",
   "feedbackListTitle": "Latest feedback",
   "feedbackListEmpty": "No feedback yet.",
-  "feedbackAnonymous": "Anonymous"
+  "feedbackAnonymous": "Anonymous",
+  "loginFailed": "Login failed. Please check your credentials.",
+  "@loginFailed": {"description": "General error message for login failure"}
 } 
