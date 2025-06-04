@@ -80,16 +80,49 @@ class PlayerTile extends StatelessWidget {
       leading: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundImage:
-                (player['photoUrl'] != null &&
-                        player['photoUrl'].toString().isNotEmpty)
-                    ? NetworkImage(player['photoUrl'])
-                    : const NetworkImage(
-                      'https://ui-avatars.com/api/?name=User',
+          GestureDetector(
+            onTap: () {
+              final imageUrl =
+                  (player['photoUrl'] != null &&
+                          player['photoUrl'].toString().isNotEmpty)
+                      ? player['photoUrl']
+                      : 'https://ui-avatars.com/api/?name=User';
+              showDialog(
+                context: context,
+                builder:
+                    (context) => Dialog(
+                      backgroundColor: Colors.transparent,
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: InteractiveViewer(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder:
+                                  (c, o, s) => const Icon(
+                                    Icons.account_circle,
+                                    size: 120,
+                                  ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-            child: null,
+              );
+            },
+            child: CircleAvatar(
+              radius: 16,
+              backgroundImage:
+                  (player['photoUrl'] != null &&
+                          player['photoUrl'].toString().isNotEmpty)
+                      ? NetworkImage(player['photoUrl'])
+                      : const NetworkImage(
+                        'https://ui-avatars.com/api/?name=User',
+                      ),
+              child: null,
+            ),
           ),
           const SizedBox(width: 6),
           point,

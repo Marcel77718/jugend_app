@@ -158,9 +158,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         }
       }
       if (authState.status == AuthStatus.signedIn) {
-        if (_isLogin) {
-          context.go('/');
-        }
+        context.go('/');
       }
     });
 

@@ -11,6 +11,8 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 final localeProvider = StateProvider<Locale?>((ref) => const Locale('de'));
 
@@ -127,21 +129,23 @@ class MyApp extends ConsumerWidget {
   }
 }
 
-class FeedbackListener extends StatefulWidget {
+class FeedbackListener extends ConsumerStatefulWidget {
   final Widget child;
   const FeedbackListener({super.key, required this.child});
 
   @override
-  State<FeedbackListener> createState() => _FeedbackListenerState();
+  ConsumerState<FeedbackListener> createState() => _FeedbackListenerState();
 }
 
-class _FeedbackListenerState extends State<FeedbackListener> {
+class _FeedbackListenerState extends ConsumerState<FeedbackListener>
+    with WidgetsBindingObserver {
   StreamSubscription<String>? _snackbarSub;
   StreamSubscription<String>? _errorSub;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _snackbarSub = FeedbackService.instance.snackbarStream.listen((msg) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -171,9 +175,52 @@ class _FeedbackListenerState extends State<FeedbackListener> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _snackbarSub?.cancel();
     _errorSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return; // Nur für eingeloggte User
+
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+        // Keine Statusänderung für diese Zustände. Der Status bleibt wie er ist.
+        // Der Timeout in der Freundesliste wird den User irgendwann als offline markieren,
+        // wenn die App im Hintergrund keine lastActive Updates mehr sendet (was der Fall sein sollte, wenn detached)
+        break;
+      case AppLifecycleState.resumed:
+        // App kommt wieder in den Vordergrund. Setze Status auf online.
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .update({
+              'status': 'online',
+              'lastActive': FieldValue.serverTimestamp(),
+            });
+        break;
+      case AppLifecycleState.detached:
+        // App wird komplett geschlossen
+        // Setze Status auf offline und entferne currentLobbyId
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .update({
+              'status': 'offline',
+              'currentLobbyId': FieldValue.delete(),
+              'lastActive':
+                  FieldValue.serverTimestamp(), // Auch hier zuletzt aktiv setzen
+            });
+        // Der LobbyViewModel handhabt leaveLobby, wenn der Benutzer in einer Lobby war.
+        break;
+      default:
+        break;
+    }
   }
 
   @override

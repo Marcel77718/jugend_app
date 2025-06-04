@@ -31,6 +31,56 @@ class _LobbyScreenState extends State<LobbyScreen> {
   bool hasLeft = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Callback für Namenskonflikt-Dialog setzen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = Provider.of<LobbyViewModel>(context, listen: false);
+      viewModel.setOnMustChangeName(() async {
+        if (viewModel.mustChangeName && context.mounted) {
+          final newName = await showDialog<String>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              final controller = TextEditingController();
+              return AlertDialog(
+                title: const Text('Namenskonflikt'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Ein eingeloggter Spieler hat den gleichen Namen. Bitte wähle einen neuen Namen.',
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(hintText: 'Neuer Name'),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Abbrechen'),
+                  ),
+                  TextButton(
+                    onPressed:
+                        () => Navigator.pop(context, controller.text.trim()),
+                    child: const Text('Ändern'),
+                  ),
+                ],
+              );
+            },
+          );
+          if (newName != null && newName.isNotEmpty && context.mounted) {
+            await viewModel.updatePlayerName(context, newName);
+          }
+        }
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return ChangeNotifierProvider(

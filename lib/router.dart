@@ -21,6 +21,7 @@ import 'package:jugend_app/presentation/screens/auth_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/presentation/screens/profile_screen.dart';
+import 'package:jugend_app/presentation/screens/friends_screen.dart';
 
 class AuthGuard extends StatelessWidget {
   final Widget child;
@@ -46,18 +47,6 @@ class AuthGuard extends StatelessWidget {
         }
         return child;
       },
-    );
-  }
-}
-
-class FriendsScreen extends StatelessWidget {
-  const FriendsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Freunde')),
-      body: const Center(child: Text('Freunde-Feature kommt demnächst!')),
     );
   }
 }
