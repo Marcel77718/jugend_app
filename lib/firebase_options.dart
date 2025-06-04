@@ -23,7 +23,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: "AIzaSyAw4yvnDkhlvdy2gRNgJpZ4f5C2FIPRyso",
+    apiKey: "AIzaSyAwQynDXhLoyd2gRNgJPz4F5CZlPFiRyso",
     authDomain: "gatherup-g4ther.firebaseapp.com",
     projectId: "gatherup-g4ther",
     storageBucket: "gatherup-g4ther.appspot.com",
@@ -31,6 +31,7 @@ class DefaultFirebaseOptions {
     appId: "1:824376832954:web:8f0e05fad8376bc44f2383",
     databaseURL:
         "https://gatherup-g4ther-default-rtdb.europe-west1.firebasedatabase.app",
+    measurementId: "G-P0WS3KMCX0",
   );
 
   static const FirebaseOptions android = FirebaseOptions(

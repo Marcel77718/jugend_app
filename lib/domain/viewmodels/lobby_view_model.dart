@@ -8,6 +8,9 @@ import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:jugend_app/data/repositories/lobby_repository.dart';
 import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   late String _lobbyId;
@@ -21,6 +24,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   String? _hostId;
   bool _isInBackground = false;
   Timer? _activityTimer;
+  bool _mustChangeName = false;
+  VoidCallback? _onMustChangeName;
 
   final _firestore = FirebaseFirestore.instance;
   late final CollectionReference _lobbyRef;
@@ -60,10 +65,37 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       ),
     );
 
+    String? photoUrl;
+    String? tag;
+    String? userUid;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+        photoUrl = userDoc.data()?['photoUrl'] ?? '';
+        tag = userDoc.data()?['tag'] ?? '';
+        userUid = user.uid;
+      } else {
+        photoUrl = null;
+        tag = null;
+        userUid = null;
+      }
+    } catch (_) {
+      photoUrl = null;
+      tag = null;
+      userUid = null;
+    }
     await _lobbyRef.doc(_deviceId).set({
       'id': _deviceId,
       'name': _playerName,
       'isReady': false,
+      'photoUrl': photoUrl ?? '',
+      'tag': tag ?? '',
+      'userUid': userUid ?? '',
     });
 
     if (isHost) {
@@ -78,39 +110,34 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
     _listenToPlayers();
     _viewModelInitialized = true;
+    // Setze initialen Status auf 'lobby' und currentLobbyId
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final container = ProviderContainer();
+      await container
+          .read(authViewModelProvider.notifier)
+          .setPresenceStatus('lobby');
+      await _firestore.collection('users').doc(currentUser.uid).update({
+        'currentLobbyId': _lobbyId,
+      });
+    }
     notifyListeners();
   }
 
   void _startActivityTimer() {
     _activityTimer?.cancel();
     _activityTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (!_isInBackground) {
-        _lobbyRepository.updatePlayerActivity(_lobbyId, _deviceId);
-        _lobbyRepository.updateLobbyActivity(_lobbyId);
-      }
+      _lobbyRepository.updatePlayerActivity(_lobbyId, _deviceId);
+      _lobbyRepository.updateLobbyActivity(_lobbyId);
     });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    switch (state) {
-      case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
-        _isInBackground = true;
-        break;
-      case AppLifecycleState.resumed:
-        _isInBackground = false;
-        // Update Aktivität wenn App wieder im Vordergrund ist
-        _lobbyRepository.updatePlayerActivity(_lobbyId, _deviceId);
-        _lobbyRepository.updateLobbyActivity(_lobbyId);
-        break;
-      case AppLifecycleState.detached:
-        // App wird komplett geschlossen
-        leaveLobby();
-        break;
-      default:
-        break;
-    }
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return; // Nur für eingeloggte User
+
+    // Keine Presence- oder lastActive-Updates mehr bei App-Lifecycle-Events!
   }
 
   void _listenToPlayers() {
@@ -141,6 +168,41 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
             await doc.reference.delete();
           }
         }
+      }
+
+      // --- NEU: Namenskonflikt eingeloggter vs. nicht eingeloggter Spieler ---
+      // Prüfe, ob ich nicht eingeloggt bin und es einen eingeloggten Spieler mit gleichem Namen gibt
+      final myPlayer = _players.firstWhere(
+        (p) => p['id'] == _deviceId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (myPlayer.isNotEmpty) {
+        final myName = (myPlayer['name'] as String).toLowerCase();
+        final myDeviceId = myPlayer['deviceId'] ?? '';
+        final isMeLoggedIn = myDeviceId.toString().isNotEmpty;
+        if (!isMeLoggedIn) {
+          // Gibt es einen eingeloggten Spieler mit gleichem Namen?
+          final conflict = _players.firstWhere(
+            (p) =>
+                (p['name'] as String).toLowerCase() == myName &&
+                p['deviceId'] != null &&
+                p['deviceId'].toString().isNotEmpty &&
+                p['id'] != _deviceId,
+            orElse: () => <String, dynamic>{},
+          );
+          if (conflict.isNotEmpty) {
+            _mustChangeName = true;
+            if (_onMustChangeName != null) {
+              _onMustChangeName!();
+            }
+          } else {
+            _mustChangeName = false;
+          }
+        } else {
+          _mustChangeName = false;
+        }
+      } else {
+        _mustChangeName = false;
       }
 
       _checkIfKicked();
@@ -287,8 +349,20 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> leaveLobby() async {
     try {
+      final currentUser = FirebaseAuth.instance.currentUser;
       await _lobbyRef.doc(_deviceId).delete();
       await _lobbyRepository.clearReconnectData(_deviceId);
+
+      // Setze Status auf online (wenn eingeloggt) oder offline und entferne currentLobbyId
+      if (currentUser != null) {
+        final container = ProviderContainer();
+        await container
+            .read(authViewModelProvider.notifier)
+            .setPresenceStatus('online');
+        await _firestore.collection('users').doc(currentUser.uid).update({
+          'currentLobbyId': FieldValue.delete(), // Lobby-ID entfernen
+        });
+      }
 
       // Host verlässt die Lobby: Rolle zufällig übertragen, aber nur solange settingsStarted nicht true ist
       final doc = await _firestore.collection('lobbies').doc(_lobbyId).get();
@@ -321,6 +395,11 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
         // Dann lösche die Lobby
         await _firestore.collection('lobbies').doc(_lobbyId).delete();
       }
+
+      final container = ProviderContainer();
+      await container
+          .read(authViewModelProvider.notifier)
+          .setPresenceStatus('online');
     } catch (_) {}
   }
 
@@ -382,7 +461,24 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> updatePlayerName(BuildContext context, String newName) async {
     try {
+      String? photoUrl;
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final userDoc =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
+          photoUrl = userDoc.data()?['photoUrl'] ?? '';
+        } else {
+          photoUrl = null;
+        }
+      } catch (_) {
+        photoUrl = null;
+      }
       await _lobbyRepository.updatePlayerName(_lobbyId, _deviceId, newName);
+      await _lobbyRef.doc(_deviceId).update({'photoUrl': photoUrl ?? ''});
       _playerName = newName;
 
       final updatedDoc = await _lobbyRef.doc(_deviceId).get();
@@ -425,6 +521,17 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   void startGame(BuildContext context) async {
     // Host setzt gameStarted auf true, Clients lauschen darauf
     final docRef = _firestore.collection('lobbies').doc(_lobbyId);
+    // Setze Status auf 'game'
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final container = ProviderContainer();
+      await container
+          .read(authViewModelProvider.notifier)
+          .setPresenceStatus('game');
+      await _firestore.collection('users').doc(currentUser.uid).update({
+        'currentLobbyId': _lobbyId,
+      });
+    }
     final reconnectData = ReconnectData(
       lobbyId: _lobbyId,
       playerName: _playerName,
@@ -438,6 +545,11 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     } else {
       GoRouter.of(context).go('/game-settings', extra: reconnectData);
     }
+
+    final container = ProviderContainer();
+    await container
+        .read(authViewModelProvider.notifier)
+        .setPresenceStatus('game');
   }
 
   void listenForGameStart(BuildContext context) {
@@ -455,6 +567,17 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   void startSettings(BuildContext context) async {
     // Host setzt settingsStarted auf true, Clients lauschen darauf
     final docRef = _firestore.collection('lobbies').doc(_lobbyId);
+    // Setze Status auf 'lobby' (falls noch nicht geschehen) und aktualisiere lastActive
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final container = ProviderContainer();
+      await container
+          .read(authViewModelProvider.notifier)
+          .setPresenceStatus('lobby');
+      await _firestore.collection('users').doc(currentUser.uid).update({
+        'currentLobbyId': _lobbyId,
+      });
+    }
     if (_isHost) {
       await docRef.update({'settingsStarted': true, 'lobbyStage': 'settings'});
       final data = ReconnectData(
@@ -485,4 +608,10 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       }
     });
   }
+
+  void setOnMustChangeName(VoidCallback callback) {
+    _onMustChangeName = callback;
+  }
+
+  bool get mustChangeName => _mustChangeName;
 }

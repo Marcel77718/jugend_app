@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "824376832954",
+    "firebase_url": "https://gatherup-g4ther-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "gatherup-g4ther",
+    "storage_bucket": "gatherup-g4ther.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:824376832954:android:33865f3ba7e182b84f2383",
+        "android_client_info": {
+          "package_name": "com.jugend_app.GatherUp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "824376832954-ar5sjt5v5r2ev1n48l7l7qhmoip61b79.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jugend_app.GatherUp",
+            "certificate_hash": "db27f3c50d94e7c360a12b495c3203de7679a3aa"
+          }
+        },
+        {
+          "client_id": "824376832954-kms03ja065r3og4f3sksmdg5bm8cp7he.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6Vz3inrjD6fq3M2hIGaYoP9i6zz20PNk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "824376832954-kms03ja065r3og4f3sksmdg5bm8cp7he.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "824376832954-034gtrqude31hheg3jn8hl7v5o2056qo.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.jugendApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
