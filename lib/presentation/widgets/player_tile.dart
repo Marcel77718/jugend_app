@@ -1,6 +1,7 @@
 // Datei: lib/presentation/widgets/player_tile.dart
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PlayerTile extends StatelessWidget {
   final Map<String, dynamic> player;
@@ -10,6 +11,8 @@ class PlayerTile extends StatelessWidget {
   final VoidCallback? onKick;
   final VoidCallback? onNameChange;
   final VoidCallback? onHostTransfer;
+  final bool showAddFriend;
+  final VoidCallback? onAddFriend;
 
   const PlayerTile({
     super.key,
@@ -20,6 +23,8 @@ class PlayerTile extends StatelessWidget {
     this.onKick,
     this.onNameChange,
     this.onHostTransfer,
+    this.showAddFriend = false,
+    this.onAddFriend,
   });
 
   @override
@@ -73,6 +78,15 @@ class PlayerTile extends StatelessWidget {
               ),
               tooltip: 'Host übertragen',
               onPressed: onHostTransfer,
+            )
+            : const SizedBox.shrink();
+
+    final addFriendButton =
+        showAddFriend && onAddFriend != null
+            ? IconButton(
+              icon: const Icon(Icons.person_add, color: Colors.teal, size: 18),
+              tooltip: 'Als Freund hinzufügen',
+              onPressed: onAddFriend,
             )
             : const SizedBox.shrink();
 
@@ -131,17 +145,47 @@ class PlayerTile extends StatelessWidget {
       title: Row(
         children: [
           Expanded(
-            child: Text(
-              player['name'] ?? 'Unbenannt',
-              style: TextStyle(
-                fontWeight: isOwnPlayer ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
+            child:
+                player['userUid'] != null &&
+                        (player['userUid'] as String).isNotEmpty
+                    ? StreamBuilder(
+                      stream:
+                          FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(player['userUid'])
+                              .snapshots(),
+                      builder: (context, snap) {
+                        if (!snap.hasData || snap.data?.data() == null) {
+                          return const Text('...');
+                        }
+                        final userData =
+                            snap.data!.data() as Map<String, dynamic>;
+                        final displayName = userData['displayName'] ?? '';
+                        final tag = userData['tag'] ?? '';
+                        return Text(
+                          '$displayName${tag.isNotEmpty ? '#$tag' : ''}',
+                          style: TextStyle(
+                            fontWeight:
+                                isOwnPlayer
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                          ),
+                        );
+                      },
+                    )
+                    : Text(
+                      player['name'] ?? 'Unbenannt',
+                      style: TextStyle(
+                        fontWeight:
+                            isOwnPlayer ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
           ),
           crown,
           nameEdit,
           hostTransferButton,
           kickButton,
+          addFriendButton,
         ],
       ),
     );

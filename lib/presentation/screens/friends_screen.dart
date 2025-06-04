@@ -6,6 +6,8 @@ import 'package:jugend_app/data/models/friend.dart';
 import 'package:jugend_app/data/models/friend_request.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jugend_app/data/models/reconnect_data.dart';
+import 'dart:async';
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -25,17 +27,24 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   String? _searchResultTag;
   String? _searchResultName;
   bool _requestSent = false;
+  Timer? _uiUpdateTimer;
+  bool _joinCooldown = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _uiUpdateTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => setState(() {}),
+    );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _uiUpdateTimer?.cancel();
     super.dispose();
   }
 
@@ -93,30 +102,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   }
 
   Color _statusColor(String? status, Map<String, dynamic>? userData) {
-    // Definiere einen Timeout, nach dem ein User als offline gilt
-    const int offlineTimeoutMinutes = 5;
-
-    if (status == null)
-      return Colors.red; // Standardmäßig offline, wenn kein Status gesetzt
-
-    switch (status) {
-      case 'online':
-        // Prüfe lastActive für echten Online-Status
-        final lastActive = userData?['lastActive'] as Timestamp?;
-        if (lastActive != null &&
-            DateTime.now().difference(lastActive.toDate()).inMinutes <=
-                offlineTimeoutMinutes) {
-          return Colors.green; // Online
-        } else {
-          return Colors.red; // Offline nach Timeout
-        }
-      case 'lobby':
-        return Colors.blue;
-      case 'game':
-        return Colors.orange;
-      default:
-        return Colors.red; // Standardmäßig offline
+    final lastActive = userData?['lastActive'] as Timestamp?;
+    if (status == 'lobby') return Colors.blue;
+    if (status == 'game') return Colors.orange;
+    if (status == 'online' &&
+        lastActive != null &&
+        DateTime.now().difference(lastActive.toDate()).inMinutes < 2) {
+      return Colors.green;
     }
+    return Colors.red;
   }
 
   String _statusText(
@@ -124,35 +118,28 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     String? lobbyId,
     Map<String, dynamic>? userData,
   ) {
-    // Definiere einen Timeout, nach dem ein User als offline gilt
-    const int offlineTimeoutMinutes = 5;
+    final lastActive = userData?['lastActive'] as Timestamp?;
+    if (status == 'lobby') return 'In Lobby';
+    if (status == 'game') return 'Im Spiel';
+    if (status == 'online' &&
+        lastActive != null &&
+        DateTime.now().difference(lastActive.toDate()).inMinutes < 2) {
+      return 'Online';
+    }
+    return 'Offline';
+  }
 
-    if (status == null)
-      return 'Offline'; // Standardmäßig offline, wenn kein Status gesetzt
-
-    // Wenn Status online ist, prüfen wir lastActive
-    if (status == 'online') {
-      final lastActive = userData?['lastActive'] as Timestamp?;
-      if (lastActive != null &&
-          DateTime.now().difference(lastActive.toDate()).inMinutes <=
-              offlineTimeoutMinutes) {
-        return 'Online'; // Online
-      } else {
-        return 'Offline'; // Offline nach Timeout
+  void _startJoinCooldown() {
+    setState(() {
+      _joinCooldown = true;
+    });
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        setState(() {
+          _joinCooldown = false;
+        });
       }
-    }
-
-    switch (status) {
-      case 'online':
-        // Dieser Fall sollte durch die obige Prüfung abgedeckt sein, aber zur Sicherheit:
-        return 'Online';
-      case 'lobby':
-        return 'In Lobby';
-      case 'game':
-        return 'Im Spiel';
-      default:
-        return 'Offline'; // Standardmäßig offline
-    }
+    });
   }
 
   @override
@@ -306,28 +293,68 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                             .collection('users')
                             .doc(friend.friendUid)
                             .snapshots(),
-                    builder: (context, snap) {
-                      final data = snap.data?.data() as Map<String, dynamic>?;
-                      final status = data?['status'] as String?;
-                      final lobbyId = data?['currentLobbyId'] as String?;
-                      final photoUrl = data?['photoUrl'] as String?;
+                    builder: (context, userSnap) {
+                      if (!userSnap.hasData || userSnap.data?.data() == null) {
+                        return const Text('...');
+                      }
+                      final userData =
+                          userSnap.data!.data() as Map<String, dynamic>;
+                      final displayName = userData['displayName'] ?? '';
+                      final tag = userData['tag'] ?? '';
+                      final status = userData['status'] as String?;
+                      final lobbyId = userData['currentLobbyId'] as String?;
+                      final photoUrl = userData['photoUrl'] as String?;
                       return ListTile(
                         leading: Stack(
                           alignment: Alignment.bottomRight,
                           children: [
-                            CircleAvatar(
-                              backgroundImage:
-                                  (photoUrl != null && photoUrl.isNotEmpty)
-                                      ? NetworkImage(photoUrl)
-                                      : const NetworkImage(
-                                        'https://ui-avatars.com/api/?name=User',
+                            GestureDetector(
+                              onTap: () {
+                                final imageUrl =
+                                    (photoUrl != null && photoUrl.isNotEmpty)
+                                        ? photoUrl
+                                        : 'https://ui-avatars.com/api/?name=User';
+                                showDialog(
+                                  context: context,
+                                  builder:
+                                      (context) => Dialog(
+                                        backgroundColor: Colors.transparent,
+                                        child: GestureDetector(
+                                          onTap:
+                                              () => Navigator.of(context).pop(),
+                                          child: InteractiveViewer(
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              child: Image.network(
+                                                imageUrl,
+                                                fit: BoxFit.contain,
+                                                errorBuilder:
+                                                    (c, o, s) => const Icon(
+                                                      Icons.account_circle,
+                                                      size: 120,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
+                                );
+                              },
+                              child: CircleAvatar(
+                                backgroundImage:
+                                    (photoUrl != null && photoUrl.isNotEmpty)
+                                        ? NetworkImage(photoUrl)
+                                        : const NetworkImage(
+                                          'https://ui-avatars.com/api/?name=User',
+                                        ),
+                              ),
                             ),
                             Container(
                               width: 12,
                               height: 12,
                               decoration: BoxDecoration(
-                                color: _statusColor(status, data),
+                                color: _statusColor(status, userData),
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: Colors.white,
@@ -337,8 +364,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                             ),
                           ],
                         ),
-                        title: Text('${friend.friendName}#${friend.friendTag}'),
-                        subtitle: Text(_statusText(status, lobbyId, data)),
+                        title: Text(
+                          '$displayName${tag.isNotEmpty ? '#$tag' : ''}',
+                        ),
+                        subtitle: Text(_statusText(status, lobbyId, userData)),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -346,21 +375,38 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                                 lobbyId != null &&
                                 lobbyId.isNotEmpty)
                               IconButton(
-                                icon: const Icon(Icons.login),
-                                tooltip: 'Lobby beitreten',
-                                onPressed: () {
-                                  // Join-Logik: zur Lobby des Freundes gehen
-                                  context.go(
-                                    '/lobby',
-                                    extra: {
-                                      'lobbyId': lobbyId,
-                                      'playerName':
-                                          user.displayName ?? 'Unbekannt',
-                                      'isHost': false,
-                                      'gameType': 'Impostor', // TODO: auslesen
-                                    },
-                                  );
-                                },
+                                icon:
+                                    _joinCooldown
+                                        ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                        : const Icon(Icons.login),
+                                tooltip:
+                                    _joinCooldown
+                                        ? 'Bitte warte 10 Sekunden...'
+                                        : 'Lobby beitreten',
+                                onPressed:
+                                    _joinCooldown
+                                        ? null
+                                        : () {
+                                          _startJoinCooldown();
+                                          context.go(
+                                            '/lobby',
+                                            extra: ReconnectData(
+                                              lobbyId: lobbyId,
+                                              playerName:
+                                                  user.displayName ??
+                                                  'Unbekannt',
+                                              isHost: false,
+                                              gameType:
+                                                  'Impostor', // TODO: auslesen
+                                            ),
+                                          );
+                                        },
                               ),
                             if (status != 'game')
                               IconButton(
@@ -378,7 +424,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                                             'Freund entfernen?',
                                           ),
                                           content: Text(
-                                            'Möchtest du ${friend.friendName} wirklich entfernen?',
+                                            'Möchtest du ${displayName} wirklich entfernen?',
                                           ),
                                           actions: [
                                             TextButton(

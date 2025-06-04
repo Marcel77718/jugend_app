@@ -50,16 +50,18 @@ class _LobbyCreateScreenState extends State<LobbyCreateScreen> {
         final auth = ref.watch(authViewModelProvider);
         final user = auth.profile;
         final isLoggedIn = auth.status == AuthStatus.signedIn && user != null;
+        final defaultName =
+            isLoggedIn ? (user?.displayName ?? 'Unbekannt') : '';
         if (isLoggedIn) {
-          // Direkt weiterleiten und Lobby erstellen
+          // Wenn eingeloggt: sofort Lobby erstellen und weiterleiten
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _createLobby(user.displayName ?? 'Unbekannt');
+            _createLobby(defaultName);
           });
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        // Für nicht eingeloggte Nutzer: Name abfragen
+        // Nicht eingeloggt: Name eingeben und Button anzeigen
         return Scaffold(
           appBar: AppBar(
             title: const Text('Spiel erstellen'),

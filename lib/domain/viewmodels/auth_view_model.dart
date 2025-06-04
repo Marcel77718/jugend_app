@@ -58,17 +58,6 @@ class AuthViewModel extends StateNotifier<AuthState> {
   Future<void> _onAuthChanged(User? user) async {
     if (user == null) {
       state = AuthState(status: AuthStatus.signedOut);
-      // Setze Status in Firestore auf 'offline' und lastActive
-      if (state.profile != null) {
-        try {
-          await _firestore.collection('users').doc(state.profile!.uid).update({
-            'status': 'offline',
-            'lastActive': FieldValue.serverTimestamp(),
-          });
-        } catch (e) {
-          print('Error updating status on logout: $e'); // Debugging
-        }
-      }
       return;
     }
     // Lade oder erstelle UserProfile
@@ -83,6 +72,13 @@ class AuthViewModel extends StateNotifier<AuthState> {
         data['tag'] = tag;
       }
       profile = UserProfile.fromJson(data);
+      // Setze Status auf 'online' NUR wenn nicht bereits lobby/game
+      final currentStatus = data['status'] as String?;
+      if (currentStatus == null ||
+          currentStatus == 'offline' ||
+          currentStatus == 'online') {
+        await setPresenceStatus('online');
+      }
     } else {
       final tag = await _generateUniqueTag(user.displayName ?? '');
       profile = UserProfile(
@@ -98,20 +94,8 @@ class AuthViewModel extends StateNotifier<AuthState> {
         tag: tag,
       );
       await _firestore.collection('users').doc(user.uid).set(profile.toJson());
+      await setPresenceStatus('online');
     }
-    // Setze Status auf 'online' und aktualisiere lastActive, NUR wenn NICHT in einer Lobby
-    // Der LobbyViewModel handhabt die Statusänderungen, wenn der Benutzer in einer Lobby ist.
-    if (profile.currentLobbyId == null) {
-      try {
-        await _firestore.collection('users').doc(user.uid).update({
-          'status': 'online',
-          'lastActive': FieldValue.serverTimestamp(),
-        });
-      } catch (e) {
-        print('Error updating status to online on login: $e'); // Debugging
-      }
-    }
-
     state = AuthState(status: AuthStatus.signedIn, profile: profile);
   }
 
@@ -261,6 +245,16 @@ class AuthViewModel extends StateNotifier<AuthState> {
         .doc(uid)
         .snapshots()
         .map((doc) => UserProfile.fromJson(doc.data()!));
+  }
+
+  // Hilfsmethoden für Presence-Status
+  Future<void> setPresenceStatus(String status) async {
+    final user = _authService.currentUser;
+    if (user == null) return;
+    await _firestore.collection('users').doc(user.uid).update({
+      'status': status,
+      'lastActive': FieldValue.serverTimestamp(),
+    });
   }
 }
 
