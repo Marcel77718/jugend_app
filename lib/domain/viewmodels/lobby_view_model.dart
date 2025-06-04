@@ -114,10 +114,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   void _startActivityTimer() {
     _activityTimer?.cancel();
     _activityTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (!_isInBackground) {
-        _lobbyRepository.updatePlayerActivity(_lobbyId, _deviceId);
-        _lobbyRepository.updateLobbyActivity(_lobbyId);
-      }
+      _lobbyRepository.updatePlayerActivity(_lobbyId, _deviceId);
+      _lobbyRepository.updateLobbyActivity(_lobbyId);
     });
   }
 
@@ -131,14 +129,11 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
         _isInBackground = true;
-        // Setze Status immer auf offline, wenn App in den Hintergrund geht/versteckt wird
+        // Aktualisiere nur lastActive, Status bleibt erhalten
         FirebaseFirestore.instance
             .collection('users')
             .doc(currentUser.uid)
-            .update({
-              'status': 'offline',
-              'lastActive': FieldValue.serverTimestamp(),
-            });
+            .update({'lastActive': FieldValue.serverTimestamp()});
         break;
       case AppLifecycleState.resumed:
         _isInBackground = false;

@@ -10,6 +10,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'dart:io' show Platform;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -141,11 +143,28 @@ class _FeedbackListenerState extends ConsumerState<FeedbackListener>
     with WidgetsBindingObserver {
   StreamSubscription<String>? _snackbarSub;
   StreamSubscription<String>? _errorSub;
+  Timer? _activityTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startActivityTimer();
+    if (kIsWeb) {
+      html.window.addEventListener('beforeunload', (event) {
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid != null) {
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .update({
+                'status': 'offline',
+                'currentLobbyId': FieldValue.delete(),
+                'lastActive': FieldValue.serverTimestamp(),
+              });
+        }
+      });
+    }
     _snackbarSub = FeedbackService.instance.snackbarStream.listen((msg) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -178,7 +197,21 @@ class _FeedbackListenerState extends ConsumerState<FeedbackListener>
     WidgetsBinding.instance.removeObserver(this);
     _snackbarSub?.cancel();
     _errorSub?.cancel();
+    _activityTimer?.cancel();
     super.dispose();
+  }
+
+  void _startActivityTimer() {
+    _activityTimer?.cancel();
+    _activityTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .update({'lastActive': FieldValue.serverTimestamp()});
+      }
+    });
   }
 
   @override
@@ -190,9 +223,11 @@ class _FeedbackListenerState extends ConsumerState<FeedbackListener>
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
-        // Keine Statusänderung für diese Zustände. Der Status bleibt wie er ist.
-        // Der Timeout in der Freundesliste wird den User irgendwann als offline markieren,
-        // wenn die App im Hintergrund keine lastActive Updates mehr sendet (was der Fall sein sollte, wenn detached)
+        // App läuft im Hintergrund. Aktualisiere lastActive, behalte Status bei.
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .update({'lastActive': FieldValue.serverTimestamp()});
         break;
       case AppLifecycleState.resumed:
         // App kommt wieder in den Vordergrund. Setze Status auf online.
