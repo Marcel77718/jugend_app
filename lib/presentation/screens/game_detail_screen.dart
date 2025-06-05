@@ -13,12 +13,11 @@ class GameDetailScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Spiel Details'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: 'Zurück zum Katalog',
           onPressed: () => context.go('/games'),
         ),
-        title: const Text('Spiel-Details'),
       ),
       body: gameAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -67,11 +66,7 @@ class GameDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 Text('Regeln', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
-                Text(
-                  game.rules,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.left,
-                ),
+                Text(game.rules, style: Theme.of(context).textTheme.bodyMedium),
                 const SizedBox(height: 24),
                 Text('Rollen', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
@@ -89,33 +84,31 @@ class GameDetailScreen extends ConsumerWidget {
                           .toList(),
                 ),
               ];
-              return Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child:
-                        isWide
-                            ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: content[0]),
-                                const SizedBox(width: 32),
-                                Expanded(
-                                  flex: 2,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: content.sublist(1),
-                                  ),
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child:
+                      isWide
+                          ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: content[0]),
+                              const SizedBox(width: 32),
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: content.sublist(1),
                                 ),
-                              ],
-                            )
-                            : Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: content,
-                            ),
-                  ),
+                              ),
+                            ],
+                          )
+                          : Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: content,
+                          ),
                 ),
               );
             },

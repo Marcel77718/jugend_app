@@ -102,6 +102,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         const SizedBox(height: 16),
                         Text(l10n.feedbackRating),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
                             5,
                             (i) => IconButton(
