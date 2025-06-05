@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jugend_app/core/app_routes.dart';
 
 class LobbyHubScreen extends StatefulWidget {
   const LobbyHubScreen({super.key});
@@ -30,7 +31,9 @@ class _LobbyHubScreenState extends State<LobbyHubScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: BackButton(onPressed: () => context.go('/')),
+        leading: BackButton(
+          onPressed: () => GoRouter.of(context).go(AppRoutes.home),
+        ),
         title: const Text('Lobbies'),
       ),
       body: Center(
@@ -43,7 +46,7 @@ class _LobbyHubScreenState extends State<LobbyHubScreen> {
                       ? null
                       : () {
                         _startCreateCooldown();
-                        context.go('/lobbies/create');
+                        GoRouter.of(context).go(AppRoutes.lobbyCreate);
                       },
               child:
                   _createCooldown
@@ -56,7 +59,7 @@ class _LobbyHubScreenState extends State<LobbyHubScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.go('/lobbies/join'),
+              onPressed: () => GoRouter.of(context).go(AppRoutes.lobbyJoin),
               child: const Text('Spiel beitreten'),
             ),
           ],

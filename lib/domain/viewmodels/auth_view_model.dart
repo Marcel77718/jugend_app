@@ -191,7 +191,9 @@ class AuthViewModel extends StateNotifier<AuthState> {
       );
       try {
         await avatarRef.delete();
-      } catch (_) {}
+      } catch (e) {
+        print('Fehler beim Löschen des Avatars: \\${e.toString()}');
+      }
       // Lösche User-Dokument
       await _firestore.collection('users').doc(uid).delete();
       // Lösche Auth-Account

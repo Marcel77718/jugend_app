@@ -7,6 +7,7 @@ import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
+import 'package:jugend_app/core/app_routes.dart';
 
 class LobbyCreateScreen extends StatefulWidget {
   const LobbyCreateScreen({super.key});
@@ -39,7 +40,7 @@ class _LobbyCreateScreenState extends State<LobbyCreateScreen> {
     await reconnectService.registerReconnectData(reconnectData);
 
     if (!mounted) return;
-    context.go('/lobby', extra: reconnectData);
+    context.go(AppRoutes.lobby, extra: reconnectData);
   }
 
   @override
@@ -65,7 +66,7 @@ class _LobbyCreateScreenState extends State<LobbyCreateScreen> {
             title: const Text('Spiel erstellen'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.go('/lobbies'),
+              onPressed: () => context.go(AppRoutes.lobbies),
             ),
           ),
           body: Padding(

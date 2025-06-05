@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
+import 'package:jugend_app/core/app_routes.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   late String _lobbyId;
@@ -330,19 +331,19 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       // Lobby existiert nicht mehr, lösche Reconnect-Daten und leite auf Startseite
       await _lobbyRepository.clearReconnectData(data.lobbyId);
       if (!context.mounted) return;
-      GoRouter.of(context).go('/');
+      GoRouter.of(context).go(AppRoutes.home);
       return;
     }
     final lobbyStage = doc.data()?['lobbyStage'] ?? 'lobby';
     if (!context.mounted) return;
     if (lobbyStage == 'lobby') {
-      GoRouter.of(context).go('/lobby', extra: data);
+      GoRouter.of(context).go(AppRoutes.lobby, extra: data);
     } else if (lobbyStage == 'settings') {
-      GoRouter.of(context).go('/game-settings', extra: data);
+      GoRouter.of(context).go(AppRoutes.gameSettings, extra: data);
     } else if (lobbyStage == 'game') {
-      GoRouter.of(context).go('/game', extra: data);
+      GoRouter.of(context).go(AppRoutes.game, extra: data);
     } else {
-      GoRouter.of(context).go('/lobby', extra: data);
+      GoRouter.of(context).go(AppRoutes.lobby, extra: data);
     }
   }
 
@@ -399,7 +400,11 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       await container
           .read(authViewModelProvider.notifier)
           .setPresenceStatus('online');
-    } catch (_) {}
+    } catch (e) {
+      print('Fehler beim Verlassen der Lobby: \\${e.toString()}');
+      // Optional: Fehler dem Nutzer anzeigen, falls Kontext verfügbar
+      // Hinweis: context ist hier nicht direkt verfügbar, daher nur Logging
+    }
   }
 
   Future<void> confirmNameChangeDialog(
@@ -540,10 +545,10 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     if (_isHost) {
       await docRef.update({'gameStarted': true, 'lobbyStage': 'game'});
       if (!context.mounted) return;
-      GoRouter.of(context).go('/game', extra: reconnectData);
+      GoRouter.of(context).go(AppRoutes.game, extra: reconnectData);
     } else {
       if (!context.mounted) return;
-      GoRouter.of(context).go('/game-settings', extra: reconnectData);
+      GoRouter.of(context).go(AppRoutes.gameSettings, extra: reconnectData);
     }
 
     final container = ProviderContainer();
@@ -558,7 +563,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       final data = snapshot.data();
       if (data != null && data['gameStarted'] == true) {
         if (context.mounted) {
-          GoRouter.of(context).go('/game');
+          GoRouter.of(context).go(AppRoutes.game);
         }
       }
     });
@@ -587,7 +592,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
         gameType: _gameType,
       );
       if (!context.mounted) return;
-      GoRouter.of(context).go('/game-settings', extra: data);
+      GoRouter.of(context).go(AppRoutes.gameSettings, extra: data);
     }
   }
 
@@ -603,7 +608,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
           gameType: _gameType,
         );
         if (context.mounted) {
-          GoRouter.of(context).go('/game-settings', extra: reconnectData);
+          GoRouter.of(context).go(AppRoutes.gameSettings, extra: reconnectData);
         }
       }
     });

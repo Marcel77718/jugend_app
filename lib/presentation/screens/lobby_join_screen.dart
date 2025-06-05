@@ -10,6 +10,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jugend_app/core/app_routes.dart';
 
 class LobbyJoinScreen extends StatefulWidget {
   const LobbyJoinScreen({super.key});
@@ -135,7 +136,7 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
     await reconnectService.registerReconnectData(reconnectData);
 
     if (!mounted) return;
-    context.go('/lobby', extra: reconnectData);
+    context.go(AppRoutes.lobby, extra: reconnectData);
   }
 
   @override
@@ -151,7 +152,7 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
             title: Text(l10n.titleLeaveLobby),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.go('/lobbies'),
+              onPressed: () => context.go(AppRoutes.lobbies),
             ),
           ),
           body: Padding(

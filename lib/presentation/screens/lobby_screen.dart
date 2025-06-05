@@ -11,6 +11,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/friend_view_model.dart';
 import 'package:jugend_app/data/models/friend.dart';
+import 'package:jugend_app/core/app_routes.dart';
 
 class LobbyScreen extends StatefulWidget {
   final String lobbyId;
@@ -115,7 +116,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
               showRedSnackbar(context, 'Du wurdest vom Host gekickt.');
-              context.go('/');
+              context.go(AppRoutes.home);
             });
           }
           final sortedPlayers = [
@@ -314,7 +315,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       await viewModel.leaveLobby();
       if (context.mounted) {
         showNeutralSnackbar(context, 'Du hast die Lobby verlassen.');
-        context.go('/');
+        context.go(AppRoutes.home);
       }
     }
   }

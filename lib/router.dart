@@ -22,6 +22,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/presentation/screens/profile_screen.dart';
 import 'package:jugend_app/presentation/screens/friends_screen.dart';
+import 'package:jugend_app/core/app_routes.dart';
 
 class AuthGuard extends StatelessWidget {
   final Widget child;
@@ -52,34 +53,34 @@ class AuthGuard extends StatelessWidget {
 }
 
 final GoRouter appRouter = GoRouter(
-  initialLocation: '/reconnect',
+  initialLocation: AppRoutes.reconnect,
   routes: [
     GoRoute(
-      path: '/reconnect',
+      path: AppRoutes.reconnect,
       pageBuilder:
           (context, state) => _fadeTransitionPage(const ReconnectScreen()),
     ),
     GoRoute(
-      path: '/',
+      path: AppRoutes.home,
       pageBuilder: (context, state) => _fadeTransitionPage(const HomeScreen()),
     ),
     GoRoute(
-      path: '/lobbies',
+      path: AppRoutes.lobbies,
       pageBuilder:
           (context, state) => _fadeTransitionPage(const LobbyHubScreen()),
     ),
     GoRoute(
-      path: '/lobbies/create',
+      path: AppRoutes.lobbyCreate,
       pageBuilder:
           (context, state) => _fadeTransitionPage(const LobbyCreateScreen()),
     ),
     GoRoute(
-      path: '/lobbies/join',
+      path: AppRoutes.lobbyJoin,
       pageBuilder:
           (context, state) => _fadeTransitionPage(const LobbyJoinScreen()),
     ),
     GoRoute(
-      path: '/lobby',
+      path: AppRoutes.lobby,
       pageBuilder: (context, state) {
         final data = state.extra as ReconnectData;
         return _fadeTransitionPage(
@@ -104,7 +105,7 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/game',
+      path: AppRoutes.game,
       pageBuilder: (context, state) {
         final data = state.extra;
         if (data is! ReconnectData) {
@@ -128,7 +129,7 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/game-settings',
+      path: AppRoutes.gameSettings,
       pageBuilder: (context, state) {
         final data = state.extra;
         if (data is! ReconnectData) {
@@ -151,17 +152,17 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/feedback',
+      path: AppRoutes.feedback,
       pageBuilder:
           (context, state) => _fadeTransitionPage(const FeedbackScreen()),
     ),
     GoRoute(
-      path: '/games',
+      path: AppRoutes.games,
       pageBuilder:
           (context, state) => _fadeTransitionPage(const GamesCatalogScreen()),
     ),
     GoRoute(
-      path: '/games/:id',
+      path: '${AppRoutes.games}/:id',
       pageBuilder: (context, state) {
         final id = state.pathParameters['id'];
         if (id == null) {
@@ -171,17 +172,17 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/auth',
+      path: AppRoutes.auth,
       pageBuilder: (context, state) => _fadeTransitionPage(const AuthScreen()),
     ),
     GoRoute(
-      path: '/friends',
+      path: AppRoutes.friends,
       pageBuilder:
           (context, state) =>
               _fadeTransitionPage(AuthGuard(child: const FriendsScreen())),
     ),
     GoRoute(
-      path: '/profile',
+      path: AppRoutes.profile,
       pageBuilder:
           (context, state) =>
               _fadeTransitionPage(AuthGuard(child: const ProfileScreen())),

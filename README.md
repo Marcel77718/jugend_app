@@ -41,6 +41,54 @@ lib/
 
 ---
 
+## Firestore-Struktur
+
+Die wichtigsten Collections und Felder:
+
+- **users**
+  - `uid` (Doc-ID): User-Dokument
+    - `displayName`: Anzeigename
+    - `email`: E-Mail-Adresse
+    - `photoUrl`: Profilbild-URL
+    - `tag`: 4-stelliger Tag (z.B. 1234)
+    - `status`: online, lobby, game, offline
+    - `currentLobbyId`: aktuelle Lobby (optional)
+    - `lastActive`: Zeitstempel
+- **lobbies**
+  - `lobbyId` (Doc-ID): Lobby-Dokument
+    - `hostId`: Device-ID des Hosts
+    - `gameType`: Spieltyp
+    - `status`: waiting, started, etc.
+    - `lobbyStage`: lobby, settings, game
+    - `createdAt`, `lastActivity`: Zeitstempel
+    - **Subcollection:** `players`
+      - `deviceId` (Doc-ID):
+        - `name`, `isHost`, `isReady`, `photoUrl`, `tag`, `userUid`
+- **reconnect**
+  - `deviceId` (Doc-ID):
+    - `lobbyId`, `playerName`, `isHost`, `gameType`
+- **feedback**
+  - `feedbackId` (Doc-ID):
+    - `userId`, `userName`, `message`, `rating`, `createdAt`, ...
+
+---
+
+## Setup & Umgebung
+
+- **Firebase:**
+  - Die Datei `lib/firebase_options.dart` enthält die Konfiguration für verschiedene Plattformen.
+  - Stelle sicher, dass dein Firebase-Projekt korrekt eingerichtet ist (Firestore, Auth, ggf. Storage).
+  - Für lokale Entwicklung ggf. Emulatoren nutzen (`firebase emulators:start`).
+- **Abhängigkeiten installieren:**
+  - `flutter pub get`
+- **Starten:**
+  - `flutter run`
+- **Linting:**
+  - `dart format .`
+  - `dart analyze`
+
+---
+
 ## Erweiterung & Wartung
 
 - **Neue Features:** Einfach neue ViewModels, Screens oder Repositories anlegen.
