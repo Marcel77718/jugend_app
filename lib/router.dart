@@ -23,6 +23,7 @@ import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/presentation/screens/profile_screen.dart';
 import 'package:jugend_app/presentation/screens/friends_screen.dart';
 import 'package:jugend_app/core/app_routes.dart';
+import 'package:jugend_app/core/transitions.dart';
 
 class AuthGuard extends StatelessWidget {
   final Widget child;
@@ -54,37 +55,46 @@ class AuthGuard extends StatelessWidget {
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.reconnect,
+  // Error-Handler
+  errorBuilder:
+      (context, state) =>
+          const Scaffold(body: Center(child: Text('Seite nicht gefunden'))),
   routes: [
     GoRoute(
       path: AppRoutes.reconnect,
       pageBuilder:
-          (context, state) => _fadeTransitionPage(const ReconnectScreen()),
+          (context, state) =>
+              FadePageTransition(child: const ReconnectScreen()),
     ),
     GoRoute(
       path: AppRoutes.home,
-      pageBuilder: (context, state) => _fadeTransitionPage(const HomeScreen()),
+      pageBuilder:
+          (context, state) => ScalePageTransition(child: const HomeScreen()),
     ),
     GoRoute(
       path: AppRoutes.lobbies,
       pageBuilder:
-          (context, state) => _fadeTransitionPage(const LobbyHubScreen()),
+          (context, state) =>
+              SlidePageTransition(child: const LobbyHubScreen()),
     ),
     GoRoute(
       path: AppRoutes.lobbyCreate,
       pageBuilder:
-          (context, state) => _fadeTransitionPage(const LobbyCreateScreen()),
+          (context, state) =>
+              SlidePageTransition(child: const LobbyCreateScreen()),
     ),
     GoRoute(
       path: AppRoutes.lobbyJoin,
       pageBuilder:
-          (context, state) => _fadeTransitionPage(const LobbyJoinScreen()),
+          (context, state) =>
+              SlidePageTransition(child: const LobbyJoinScreen()),
     ),
     GoRoute(
       path: AppRoutes.lobby,
       pageBuilder: (context, state) {
         final data = state.extra as ReconnectData;
-        return _fadeTransitionPage(
-          ChangeNotifierProvider(
+        return FadePageTransition(
+          child: ChangeNotifierProvider(
             create:
                 (_) =>
                     LobbyViewModel(lobbyRepository: LobbyRepository())
@@ -110,11 +120,10 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) {
         final data = state.extra;
         if (data is! ReconnectData) {
-          // Fallback: Weiterleitung auf Startseite
-          return _fadeTransitionPage(const HomeScreen());
+          return FadePageTransition(child: const HomeScreen());
         }
-        return _fadeTransitionPage(
-          ChangeNotifierProvider(
+        return FadePageTransition(
+          child: ChangeNotifierProvider(
             create:
                 (_) =>
                     LobbyViewModel(lobbyRepository: LobbyRepository())
@@ -135,10 +144,10 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) {
         final data = state.extra;
         if (data is! ReconnectData) {
-          return _fadeTransitionPage(const HomeScreen());
+          return FadePageTransition(child: const HomeScreen());
         }
-        return _fadeTransitionPage(
-          ChangeNotifierProvider(
+        return FadePageTransition(
+          child: ChangeNotifierProvider(
             create:
                 (_) =>
                     LobbyViewModel(lobbyRepository: LobbyRepository())
@@ -157,47 +166,43 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.feedback,
       pageBuilder:
-          (context, state) => _fadeTransitionPage(const FeedbackScreen()),
+          (context, state) =>
+              SlidePageTransition(child: const FeedbackScreen()),
     ),
     GoRoute(
       path: AppRoutes.games,
       pageBuilder:
-          (context, state) => _fadeTransitionPage(const GamesCatalogScreen()),
+          (context, state) =>
+              ScalePageTransition(child: const GamesCatalogScreen()),
     ),
     GoRoute(
       path: '${AppRoutes.games}/:id',
       pageBuilder: (context, state) {
         final id = state.pathParameters['id'];
         if (id == null) {
-          return _fadeTransitionPage(const GamesCatalogScreen());
+          return ScalePageTransition(child: const GamesCatalogScreen());
         }
-        return _fadeTransitionPage(GameDetailScreen(gameId: id));
+        return ScalePageTransition(child: GameDetailScreen(gameId: id));
       },
     ),
     GoRoute(
       path: AppRoutes.auth,
-      pageBuilder: (context, state) => _fadeTransitionPage(const AuthScreen()),
+      pageBuilder:
+          (context, state) => FadePageTransition(child: const AuthScreen()),
     ),
     GoRoute(
       path: AppRoutes.friends,
       pageBuilder:
-          (context, state) =>
-              _fadeTransitionPage(AuthGuard(child: const FriendsScreen())),
+          (context, state) => SlidePageTransition(
+            child: AuthGuard(child: const FriendsScreen()),
+          ),
     ),
     GoRoute(
       path: AppRoutes.profile,
       pageBuilder:
-          (context, state) =>
-              _fadeTransitionPage(AuthGuard(child: const ProfileScreen())),
+          (context, state) => SlidePageTransition(
+            child: AuthGuard(child: const ProfileScreen()),
+          ),
     ),
   ],
 );
-
-CustomTransitionPage _fadeTransitionPage(Widget child) {
-  return CustomTransitionPage(
-    child: child,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return FadeTransition(opacity: animation, child: child);
-    },
-  );
-}

@@ -185,8 +185,6 @@ class _FeedbackListenerState extends ConsumerState<FeedbackListener> {
   @override
   void initState() {
     super.initState();
-    // WidgetsBinding.instance.addObserver(this); // Entfernt
-    // _startActivityTimer(); // Entfernt
     _snackbarSub = FeedbackService.instance.snackbarStream.listen((msg) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -216,10 +214,8 @@ class _FeedbackListenerState extends ConsumerState<FeedbackListener> {
 
   @override
   void dispose() {
-    // WidgetsBinding.instance.removeObserver(this); // Entfernt
     _snackbarSub?.cancel();
     _errorSub?.cancel();
-    // _activityTimer?.cancel(); // Entfernt
     super.dispose();
   }
 
