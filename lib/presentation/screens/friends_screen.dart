@@ -33,10 +33,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _uiUpdateTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => setState(() {}),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = ref.read(friendViewModelProvider);
+      viewModel.listenToFriendProfiles();
+    });
   }
 
   @override
@@ -140,6 +140,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     });
   }
 
+  Future<void> _refreshFriends(FriendViewModel viewModel) async {
+    viewModel.listenToFriendProfiles();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authViewModelProvider);
@@ -159,7 +163,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           controller: _tabController,
           tabs: [
             const Tab(text: 'Freunde'),
-            // Tab für Anfragen mit Badge
             Tab(
               child: StreamBuilder<List<FriendRequest>>(
                 stream: viewModel.requestsStream,
@@ -171,29 +174,20 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                       const Text('Anfragen'),
                       if (requestCount > 0)
                         Positioned(
-                          right: -15, // Passe die Position an
-                          top: -5, // Passe die Position an
+                          right: -8,
+                          top: -8,
                           child: Container(
-                            padding: const EdgeInsets.all(3),
+                            padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               color: Colors.red,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 1.5,
-                              ),
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              '$requestCount',
+                              requestCount.toString(),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 9,
+                                fontSize: 12,
                               ),
-                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
@@ -209,255 +203,190 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         controller: _tabController,
         children: [
           // --- Freunde-Liste ---
-          StreamBuilder<List<Friend>>(
-            stream: viewModel.friendsStream,
-            builder: (context, snapshot) {
-              final friends = snapshot.data ?? [];
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: (friends.isEmpty ? 1 : friends.length + 1),
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, i) {
-                  if (i == 0) {
-                    // Suchfeld immer anzeigen
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Freund hinzufügen'),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Name#Tag',
-                                      errorText: _searchError,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed:
-                                      _isSearching
-                                          ? null
-                                          : () =>
-                                              _searchAndSendRequest(viewModel),
-                                  child:
-                                      _isSearching
-                                          ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                          : const Icon(Icons.search),
-                                ),
-                              ],
-                            ),
-                            if (_searchResult != null && !_requestSent)
+          RefreshIndicator(
+            onRefresh: () => _refreshFriends(viewModel),
+            child: StreamBuilder<Map<String, Map<String, dynamic>>>(
+              stream: viewModel.friendProfilesStream,
+              builder: (context, snapshot) {
+                if (viewModel.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (viewModel.error != null) {
+                  return Center(child: Text('Fehler: ${viewModel.error}'));
+                }
+                final profiles = snapshot.data ?? viewModel.friendProfiles;
+                final friends = profiles.entries.toList();
+                if (friends.isEmpty) {
+                  return const Center(child: Text('Noch keine Freunde.'));
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: friends.length + 1,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (context, i) {
+                    if (i == 0) {
+                      // Suchfeld immer anzeigen
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Freund hinzufügen'),
+                              const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Text('Gefunden: $_searchResult'),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _searchController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Name#Tag',
+                                        errorText: _searchError,
+                                      ),
+                                    ),
+                                  ),
                                   const SizedBox(width: 8),
                                   ElevatedButton(
-                                    onPressed: () => _sendRequest(viewModel),
-                                    child: const Text('Anfrage senden'),
+                                    onPressed:
+                                        _isSearching
+                                            ? null
+                                            : () => _searchAndSendRequest(
+                                              viewModel,
+                                            ),
+                                    child:
+                                        _isSearching
+                                            ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                            : const Icon(Icons.search),
                                   ),
                                 ],
                               ),
-                            if (_requestSent)
-                              const Text(
-                                'Anfrage gesendet!',
-                                style: TextStyle(color: Colors.green),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  if (friends.isEmpty) {
-                    return const Center(child: Text('Noch keine Freunde.'));
-                  }
-                  final friend = friends[i - 1];
-                  return StreamBuilder<DocumentSnapshot>(
-                    stream:
-                        FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(friend.friendUid)
-                            .snapshots(),
-                    builder: (context, userSnap) {
-                      if (!userSnap.hasData || userSnap.data?.data() == null) {
-                        return const Text('...');
-                      }
-                      final userData =
-                          userSnap.data!.data() as Map<String, dynamic>;
-                      final displayName = userData['displayName'] ?? '';
-                      final tag = userData['tag'] ?? '';
-                      final status = userData['status'] as String?;
-                      final lobbyId = userData['currentLobbyId'] as String?;
-                      final photoUrl = userData['photoUrl'] as String?;
-                      return ListTile(
-                        leading: Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                final imageUrl =
-                                    (photoUrl != null && photoUrl.isNotEmpty)
-                                        ? photoUrl
-                                        : 'https://ui-avatars.com/api/?name=User';
-                                showDialog(
-                                  context: context,
-                                  builder:
-                                      (context) => Dialog(
-                                        backgroundColor: Colors.transparent,
-                                        child: GestureDetector(
-                                          onTap:
-                                              () => Navigator.of(context).pop(),
-                                          child: InteractiveViewer(
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                              child: Image.network(
-                                                imageUrl,
-                                                fit: BoxFit.contain,
-                                                errorBuilder:
-                                                    (c, o, s) => const Icon(
-                                                      Icons.account_circle,
-                                                      size: 120,
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                );
-                              },
-                              child: CircleAvatar(
-                                backgroundImage:
-                                    (photoUrl != null && photoUrl.isNotEmpty)
-                                        ? NetworkImage(photoUrl)
-                                        : const NetworkImage(
-                                          'https://ui-avatars.com/api/?name=User',
-                                        ),
-                              ),
-                            ),
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: _statusColor(status, userData),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
+                              if (_searchResult != null && !_requestSent)
+                                Row(
+                                  children: [
+                                    Text('Gefunden: $_searchResult'),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      onPressed: () => _sendRequest(viewModel),
+                                      child: const Text('Anfrage senden'),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        title: Text(
-                          displayName + (tag.isNotEmpty ? '#$tag' : ''),
-                        ),
-                        subtitle: Text(_statusText(status, lobbyId, userData)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (status == 'lobby' &&
-                                lobbyId != null &&
-                                lobbyId.isNotEmpty)
-                              IconButton(
-                                icon:
-                                    _joinCooldown
-                                        ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                        : const Icon(Icons.login),
-                                tooltip:
-                                    _joinCooldown
-                                        ? 'Bitte warte 10 Sekunden...'
-                                        : 'Lobby beitreten',
-                                onPressed:
-                                    _joinCooldown
-                                        ? null
-                                        : () {
-                                          _startJoinCooldown();
-                                          context.go(
-                                            '/lobby',
-                                            extra: ReconnectData(
-                                              lobbyId: lobbyId,
-                                              playerName:
-                                                  user.displayName ??
-                                                  'Unbekannt',
-                                              isHost: false,
-                                              gameType:
-                                                  userData['gameType'] ??
-                                                  'Impostor',
-                                            ),
-                                          );
-                                        },
-                              ),
-                            if (status != 'game')
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
+                              if (_requestSent)
+                                const Text(
+                                  'Anfrage gesendet!',
+                                  style: TextStyle(color: Colors.green),
                                 ),
-                                tooltip: 'Freund entfernen',
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder:
-                                        (context) => AlertDialog(
-                                          title: const Text(
-                                            'Freund entfernen?',
-                                          ),
-                                          content: Text(
-                                            'Möchtest du $displayName wirklich entfernen?',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(
-                                                    context,
-                                                    false,
-                                                  ),
-                                              child: const Text('Abbrechen'),
-                                            ),
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(
-                                                    context,
-                                                    true,
-                                                  ),
-                                              child: const Text('Entfernen'),
-                                            ),
-                                          ],
-                                        ),
-                                  );
-                                  if (confirm == true) {
-                                    await viewModel.removeFriend(friend);
-                                  }
-                                },
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
-                    },
-                  );
-                },
-              );
-            },
+                    }
+                    final entry = friends[i - 1];
+                    final userData = entry.value;
+                    final displayName = userData['displayName'] ?? '';
+                    final tag = userData['tag'] ?? '';
+                    final status = userData['status'] as String?;
+                    final lobbyId = userData['currentLobbyId'] as String?;
+                    final photoUrl = userData['photoUrl'] as String?;
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage:
+                            photoUrl != null ? NetworkImage(photoUrl) : null,
+                        child:
+                            photoUrl == null ? const Icon(Icons.person) : null,
+                      ),
+                      title: Text('$displayName#$tag'),
+                      subtitle: Text(_statusText(status, lobbyId, userData)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _statusColor(status, userData),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (status == 'lobby' && !_joinCooldown)
+                            IconButton(
+                              icon: const Icon(Icons.play_arrow),
+                              tooltip: 'Lobby beitreten',
+                              onPressed: () {
+                                _startJoinCooldown();
+                                context.go(
+                                  '/lobby',
+                                  extra: ReconnectData(
+                                    lobbyId: lobbyId ?? '',
+                                    playerName: user.displayName ?? 'Unbekannt',
+                                    isHost: false,
+                                    gameType:
+                                        userData['gameType'] ?? 'Impostor',
+                                  ),
+                                );
+                              },
+                            ),
+                          if (status != 'game')
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Freund entfernen',
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder:
+                                      (context) => AlertDialog(
+                                        title: const Text('Freund entfernen?'),
+                                        content: Text(
+                                          'Möchtest du $displayName wirklich entfernen?',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed:
+                                                () => Navigator.pop(
+                                                  context,
+                                                  false,
+                                                ),
+                                            child: const Text('Abbrechen'),
+                                          ),
+                                          TextButton(
+                                            onPressed:
+                                                () => Navigator.pop(
+                                                  context,
+                                                  true,
+                                                ),
+                                            child: const Text('Entfernen'),
+                                          ),
+                                        ],
+                                      ),
+                                );
+                                if (confirm == true) {
+                                  await viewModel.removeFriend(
+                                    Friend(
+                                      friendUid: entry.key,
+                                      friendName: displayName,
+                                      friendTag: tag,
+                                      status: status ?? '',
+                                      hinzugefuegtAm: DateTime.now(),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
           // --- Anfragen ---
           StreamBuilder<List<FriendRequest>>(

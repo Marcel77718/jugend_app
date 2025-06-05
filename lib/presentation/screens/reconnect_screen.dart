@@ -6,6 +6,7 @@ import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:jugend_app/data/services/device_id_helper.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/presentation/dialogs/reconnect_dialog.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ReconnectScreen extends StatefulWidget {
   const ReconnectScreen({super.key});
@@ -22,10 +23,10 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
   @override
   void initState() {
     super.initState();
-    _checkReconnect();
+    // Kein _checkReconnect(ref) hier, da ref nur im Consumer verfügbar ist
   }
 
-  Future<void> _checkReconnect() async {
+  Future<void> _checkReconnect(WidgetRef ref) async {
     try {
       final deviceId = await DeviceIdHelper.getSafeDeviceId();
       final reconnectData = await _reconnectService.getReconnectData(deviceId);
@@ -44,7 +45,7 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
         );
         if (!mounted) return;
         if (result == true) {
-          final viewModel = LobbyViewModel();
+          final viewModel = LobbyViewModel(ref: ref);
           await viewModel.handleReconnect(context, reconnectData);
         } else {
           await _reconnectService.clearReconnectData(deviceId);
@@ -66,29 +67,39 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child:
-            _isLoading
-                ? const CircularProgressIndicator()
-                : _error != null
-                ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => context.go('/game-selection'),
-                      child: const Text('Zurück zur Spielauswahl'),
-                    ),
-                  ],
-                )
-                : const CircularProgressIndicator(),
-      ),
+    return Consumer(
+      builder: (context, ref, _) {
+        if (_isLoading) {
+          // Starte den Reconnect-Check nur einmal
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_isLoading) _checkReconnect(ref);
+          });
+        }
+        return Scaffold(
+          body: Center(
+            child:
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : _error != null
+                    ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => context.go('/game-selection'),
+                          child: const Text('Zurück zur Spielauswahl'),
+                        ),
+                      ],
+                    )
+                    : const CircularProgressIndicator(),
+          ),
+        );
+      },
     );
   }
 }

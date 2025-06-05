@@ -1,3 +1,7 @@
+import 'package:json_annotation/json_annotation.dart';
+part 'friend.g.dart';
+
+@JsonSerializable()
 class Friend {
   final String friendUid;
   final String friendName;
@@ -13,21 +17,6 @@ class Friend {
     required this.hinzugefuegtAm,
   });
 
-  factory Friend.fromJson(Map<String, dynamic> json) {
-    return Friend(
-      friendUid: json['friendUid'] as String,
-      friendName: json['friendName'] as String,
-      friendTag: json['friendTag'] as String,
-      status: json['status'] as String,
-      hinzugefuegtAm: DateTime.parse(json['hinzugefuegtAm'] as String),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'friendUid': friendUid,
-    'friendName': friendName,
-    'friendTag': friendTag,
-    'status': status,
-    'hinzugefuegtAm': hinzugefuegtAm.toIso8601String(),
-  };
+  factory Friend.fromJson(Map<String, dynamic> json) => _$FriendFromJson(json);
+  Map<String, dynamic> toJson() => _$FriendToJson(this);
 }

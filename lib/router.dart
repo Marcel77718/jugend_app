@@ -10,7 +10,6 @@ import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:jugend_app/presentation/screens/reconnect_screen.dart';
 import 'package:jugend_app/presentation/screens/game_screen.dart';
 import 'package:jugend_app/presentation/screens/game_settings_screen.dart';
-import 'package:provider/provider.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/data/repositories/lobby_repository.dart';
 import 'package:flutter/material.dart';
@@ -83,22 +82,26 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) {
         final data = state.extra as ReconnectData;
         return _fadeTransitionPage(
-          ChangeNotifierProvider(
-            create:
-                (_) =>
-                    LobbyViewModel(lobbyRepository: LobbyRepository())
-                      ..initialize(
-                        lobbyId: data.lobbyId,
-                        playerName: data.playerName,
-                        isHost: data.isHost,
-                        gameType: data.gameType,
-                      ),
-            child: LobbyScreen(
-              lobbyId: data.lobbyId,
-              playerName: data.playerName,
-              isHost: data.isHost,
-              gameType: data.gameType,
-            ),
+          riverpod.Consumer(
+            builder: (context, ref, _) {
+              final viewModel = LobbyViewModel(
+                ref: ref,
+                lobbyRepository: LobbyRepository(),
+              );
+              viewModel.initialize(
+                lobbyId: data.lobbyId,
+                playerName: data.playerName,
+                isHost: data.isHost,
+                gameType: data.gameType,
+              );
+              return LobbyScreen(
+                lobbyId: data.lobbyId,
+                playerName: data.playerName,
+                isHost: data.isHost,
+                gameType: data.gameType,
+                viewModel: viewModel,
+              );
+            },
           ),
         );
       },
@@ -112,17 +115,20 @@ final GoRouter appRouter = GoRouter(
           return _fadeTransitionPage(const HomeScreen());
         }
         return _fadeTransitionPage(
-          ChangeNotifierProvider(
-            create:
-                (_) =>
-                    LobbyViewModel(lobbyRepository: LobbyRepository())
-                      ..initialize(
-                        lobbyId: data.lobbyId,
-                        playerName: data.playerName,
-                        isHost: data.isHost,
-                        gameType: data.gameType,
-                      ),
-            child: const GameScreen(),
+          riverpod.Consumer(
+            builder: (context, ref, _) {
+              final viewModel = LobbyViewModel(
+                ref: ref,
+                lobbyRepository: LobbyRepository(),
+              );
+              viewModel.initialize(
+                lobbyId: data.lobbyId,
+                playerName: data.playerName,
+                isHost: data.isHost,
+                gameType: data.gameType,
+              );
+              return const GameScreen();
+            },
           ),
         );
       },
@@ -135,17 +141,20 @@ final GoRouter appRouter = GoRouter(
           return _fadeTransitionPage(const HomeScreen());
         }
         return _fadeTransitionPage(
-          ChangeNotifierProvider(
-            create:
-                (_) =>
-                    LobbyViewModel(lobbyRepository: LobbyRepository())
-                      ..initialize(
-                        lobbyId: data.lobbyId,
-                        playerName: data.playerName,
-                        isHost: data.isHost,
-                        gameType: data.gameType,
-                      ),
-            child: const GameSettingsScreen(),
+          riverpod.Consumer(
+            builder: (context, ref, _) {
+              final viewModel = LobbyViewModel(
+                ref: ref,
+                lobbyRepository: LobbyRepository(),
+              );
+              viewModel.initialize(
+                lobbyId: data.lobbyId,
+                playerName: data.playerName,
+                isHost: data.isHost,
+                gameType: data.gameType,
+              );
+              return const GameSettingsScreen();
+            },
           ),
         );
       },

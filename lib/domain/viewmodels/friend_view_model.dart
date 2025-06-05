@@ -13,6 +13,22 @@ class FriendViewModel extends ChangeNotifier {
   final String myName;
   final String myTag;
 
+  // Map für alle Freund-Profile
+  Map<String, Map<String, dynamic>> _friendProfiles = {};
+  Map<String, Map<String, dynamic>> get friendProfiles => _friendProfiles;
+
+  // Lade- und Fehlerzustand
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+  String? _error;
+  String? get error => _error;
+
+  // Stream für Profile-Updates
+  Stream<Map<String, Map<String, dynamic>>>? _friendProfilesStream;
+  Stream<Map<String, Map<String, dynamic>>>? get friendProfilesStream =>
+      _friendProfilesStream;
+  StreamSubscription? _profilesSubscription;
+
   FriendViewModel({
     required this.myUid,
     required this.myName,
@@ -29,6 +45,14 @@ class FriendViewModel extends ChangeNotifier {
       _service.requestsStream(myUid).map((list) {
         return list.length;
       });
+
+  // Lade alle Freund-Profile auf einmal
+  Future<void> fetchAllFriendProfiles() async {
+    final friends = await _service.friendsStream(myUid).first;
+    final uids = friends.map((f) => f.friendUid).toList();
+    _friendProfiles = await _service.loadUserProfiles(uids);
+    notifyListeners();
+  }
 
   // Suche nach User per Name#Tag
   Future<Map<String, dynamic>?> searchUser(String name, String tag) async {
@@ -82,6 +106,46 @@ class FriendViewModel extends ChangeNotifier {
   // Freund entfernen
   Future<void> removeFriend(Friend friend) async {
     await _service.removeFriend(myUid: myUid, friendUid: friend.friendUid);
+  }
+
+  void listenToFriendProfiles() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final friends = await _service.friendsStream(myUid).first;
+      final uids = friends.map((f) => f.friendUid).toList();
+      if (uids.isEmpty) {
+        _friendProfiles = {};
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+      _profilesSubscription?.cancel();
+      _friendProfilesStream = _service.userProfilesStream(uids);
+      _profilesSubscription = _friendProfilesStream!.listen(
+        (profiles) {
+          _friendProfiles = profiles;
+          _isLoading = false;
+          notifyListeners();
+        },
+        onError: (e) {
+          _error = e.toString();
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _profilesSubscription?.cancel();
+    super.dispose();
   }
 }
 

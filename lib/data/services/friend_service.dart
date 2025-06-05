@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jugend_app/data/models/friend.dart';
 import 'package:jugend_app/data/models/friend_request.dart';
+import 'package:async/async.dart';
 
 class FriendService {
   final FirebaseFirestore _firestore;
@@ -114,5 +115,57 @@ class FriendService {
   }) async {
     await getUserFriendsRef(myUid).doc(friendUid).delete();
     await getUserFriendsRef(friendUid).doc(myUid).delete();
+  }
+
+  // Lade mehrere User-Profile auf einmal
+  Future<Map<String, Map<String, dynamic>>> loadUserProfiles(
+    List<String> uids,
+  ) async {
+    final Map<String, Map<String, dynamic>> profiles = {};
+
+    // Teile die UIDs in Chunks von maximal 10 auf
+    for (var i = 0; i < uids.length; i += 10) {
+      final end = (i + 10 < uids.length) ? i + 10 : uids.length;
+      final chunk = uids.sublist(i, end);
+
+      final query =
+          await _firestore
+              .collection('users')
+              .where(FieldPath.documentId, whereIn: chunk)
+              .get();
+
+      for (var doc in query.docs) {
+        profiles[doc.id] = doc.data();
+      }
+    }
+
+    return profiles;
+  }
+
+  // Stream-Variante: Gebündelte User-Profile als Stream
+  Stream<Map<String, Map<String, dynamic>>> userProfilesStream(
+    List<String> uids,
+  ) async* {
+    // Teile die UIDs in Chunks von maximal 10 auf
+    final List<Stream<QuerySnapshot>> streams = [];
+    for (var i = 0; i < uids.length; i += 10) {
+      final end = (i + 10 < uids.length) ? i + 10 : uids.length;
+      final chunk = uids.sublist(i, end);
+      streams.add(
+        _firestore
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .snapshots(),
+      );
+    }
+    await for (final snapshots in StreamZip(streams)) {
+      final Map<String, Map<String, dynamic>> profiles = {};
+      for (final snap in snapshots) {
+        for (final doc in snap.docs) {
+          profiles[doc.id] = doc.data() as Map<String, dynamic>;
+        }
+      }
+      yield profiles;
+    }
   }
 }

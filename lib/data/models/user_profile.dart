@@ -1,5 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:json_annotation/json_annotation.dart';
+part 'user_profile.g.dart';
 
+@JsonSerializable()
 class UserProfile {
   final String uid;
   final String? email;
@@ -25,41 +27,9 @@ class UserProfile {
     this.lastActive,
   });
 
-  factory UserProfile.fromJson(Map<String, dynamic> json) {
-    return UserProfile(
-      uid: json['uid'] as String,
-      email: json['email'] as String?,
-      displayName: json['displayName'] as String?,
-      photoUrl: json['photoUrl'] as String?,
-      createdAt:
-          (json['createdAt'] is Timestamp)
-              ? (json['createdAt'] as Timestamp).toDate()
-              : DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
-      provider: json['provider'] as String?,
-      tag: json['tag'] as String? ?? '',
-      status: json['status'] as String?,
-      currentLobbyId: json['currentLobbyId'] as String?,
-      lastActive:
-          json['lastActive'] is Timestamp
-              ? (json['lastActive'] as Timestamp).toDate()
-              : (json['lastActive'] != null
-                  ? DateTime.tryParse(json['lastActive'])
-                  : null),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'uid': uid,
-    'email': email,
-    'displayName': displayName,
-    'photoUrl': photoUrl,
-    'createdAt': createdAt.toIso8601String(),
-    'provider': provider,
-    'tag': tag,
-    'status': status,
-    'currentLobbyId': currentLobbyId,
-    'lastActive': lastActive?.toIso8601String(),
-  };
+  factory UserProfile.fromJson(Map<String, dynamic> json) =>
+      _$UserProfileFromJson(json);
+  Map<String, dynamic> toJson() => _$UserProfileToJson(this);
 
   UserProfile copyWith({
     String? uid,

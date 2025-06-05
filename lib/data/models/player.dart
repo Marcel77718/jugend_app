@@ -1,5 +1,9 @@
 // 📁 Datei: lib/data/models/player.dart
 
+import 'package:json_annotation/json_annotation.dart';
+part 'player.g.dart';
+
+@JsonSerializable()
 class Player {
   final String name;
   final bool isHost;
@@ -13,23 +17,10 @@ class Player {
     required this.deviceId,
   });
 
-  factory Player.fromJson(Map<String, dynamic> json) {
-    return Player(
-      name: json['name'] ?? '',
-      isReady: json['isReady'] ?? false,
-      isHost: json['isHost'] ?? false,
-      deviceId: json['deviceId'] ?? '',
-    );
-  }
+  factory Player.fromJson(Map<String, dynamic> json) => _$PlayerFromJson(json);
+  Map<String, dynamic> toJson() => _$PlayerToJson(this);
 
   factory Player.empty() {
     return Player(name: '', deviceId: '', isHost: false, isReady: false);
   }
-
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    'isHost': isHost,
-    'isReady': isReady,
-    'deviceId': deviceId,
-  };
 }

@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
+  final WidgetRef ref;
   late String _lobbyId;
   late String _playerName;
   late bool _isHost;
@@ -31,7 +32,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   StreamSubscription? _playerStreamSub;
   final ILobbyRepository _lobbyRepository;
 
-  LobbyViewModel({ILobbyRepository? lobbyRepository})
+  LobbyViewModel({required this.ref, ILobbyRepository? lobbyRepository})
     : _lobbyRepository = lobbyRepository ?? LobbyRepository();
 
   Future<void> initialize({
@@ -112,10 +113,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze initialen Status auf 'lobby' und currentLobbyId
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      final container = ProviderContainer();
-      await container
-          .read(authViewModelProvider.notifier)
-          .setPresenceStatus('lobby');
+      await ref.read(authViewModelProvider.notifier).setPresenceStatus('lobby');
       await _firestore.collection('users').doc(currentUser.uid).update({
         'currentLobbyId': _lobbyId,
       });
@@ -354,8 +352,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
       // Setze Status auf online (wenn eingeloggt) oder offline und entferne currentLobbyId
       if (currentUser != null) {
-        final container = ProviderContainer();
-        await container
+        await ref
             .read(authViewModelProvider.notifier)
             .setPresenceStatus('online');
         await _firestore.collection('users').doc(currentUser.uid).update({
@@ -395,8 +392,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
         await _firestore.collection('lobbies').doc(_lobbyId).delete();
       }
 
-      final container = ProviderContainer();
-      await container
+      await ref
           .read(authViewModelProvider.notifier)
           .setPresenceStatus('online');
     } catch (_) {}
@@ -523,10 +519,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze Status auf 'game'
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      final container = ProviderContainer();
-      await container
-          .read(authViewModelProvider.notifier)
-          .setPresenceStatus('game');
+      await ref.read(authViewModelProvider.notifier).setPresenceStatus('game');
       await _firestore.collection('users').doc(currentUser.uid).update({
         'currentLobbyId': _lobbyId,
       });
@@ -546,10 +539,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       GoRouter.of(context).go('/game-settings', extra: reconnectData);
     }
 
-    final container = ProviderContainer();
-    await container
-        .read(authViewModelProvider.notifier)
-        .setPresenceStatus('game');
+    await ref.read(authViewModelProvider.notifier).setPresenceStatus('game');
   }
 
   void listenForGameStart(BuildContext context) {
@@ -570,10 +560,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze Status auf 'lobby' (falls noch nicht geschehen) und aktualisiere lastActive
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      final container = ProviderContainer();
-      await container
-          .read(authViewModelProvider.notifier)
-          .setPresenceStatus('lobby');
+      await ref.read(authViewModelProvider.notifier).setPresenceStatus('lobby');
       await _firestore.collection('users').doc(currentUser.uid).update({
         'currentLobbyId': _lobbyId,
       });
