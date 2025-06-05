@@ -23,10 +23,10 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
   @override
   void initState() {
     super.initState();
-    // Kein _checkReconnect(ref) hier, da ref nur im Consumer verfügbar ist
+    // _checkReconnect wird in build() ausgelöst
   }
 
-  Future<void> _checkReconnect(WidgetRef ref) async {
+  Future<void> _checkReconnect() async {
     try {
       final deviceId = await DeviceIdHelper.getSafeDeviceId();
       final reconnectData = await _reconnectService.getReconnectData(deviceId);
@@ -45,7 +45,7 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
         );
         if (!mounted) return;
         if (result == true) {
-          final viewModel = LobbyViewModel(ref: ref);
+          final viewModel = LobbyViewModel();
           await viewModel.handleReconnect(context, reconnectData);
         } else {
           await _reconnectService.clearReconnectData(deviceId);
@@ -72,7 +72,7 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
         if (_isLoading) {
           // Starte den Reconnect-Check nur einmal
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_isLoading) _checkReconnect(ref);
+            if (_isLoading) _checkReconnect();
           });
         }
         return Scaffold(

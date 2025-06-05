@@ -13,6 +13,7 @@ import 'package:jugend_app/presentation/screens/game_settings_screen.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/data/repositories/lobby_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:jugend_app/presentation/screens/feedback_screen.dart';
 import 'package:jugend_app/presentation/screens/games_catalog_screen.dart';
 import 'package:jugend_app/presentation/screens/game_detail_screen.dart';
@@ -81,27 +82,14 @@ final GoRouter appRouter = GoRouter(
       path: '/lobby',
       pageBuilder: (context, state) {
         final data = state.extra as ReconnectData;
+        final viewModel = LobbyViewModel(lobbyRepository: LobbyRepository());
         return _fadeTransitionPage(
-          riverpod.Consumer(
-            builder: (context, ref, _) {
-              final viewModel = LobbyViewModel(
-                ref: ref,
-                lobbyRepository: LobbyRepository(),
-              );
-              viewModel.initialize(
-                lobbyId: data.lobbyId,
-                playerName: data.playerName,
-                isHost: data.isHost,
-                gameType: data.gameType,
-              );
-              return LobbyScreen(
-                lobbyId: data.lobbyId,
-                playerName: data.playerName,
-                isHost: data.isHost,
-                gameType: data.gameType,
-                viewModel: viewModel,
-              );
-            },
+          LobbyScreen(
+            lobbyId: data.lobbyId,
+            playerName: data.playerName,
+            isHost: data.isHost,
+            gameType: data.gameType,
+            viewModel: viewModel,
           ),
         );
       },
@@ -109,26 +97,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/game',
       pageBuilder: (context, state) {
-        final data = state.extra;
-        if (data is! ReconnectData) {
-          // Fallback: Weiterleitung auf Startseite
+        final extra = state.extra;
+        if (extra is! LobbyViewModel) {
           return _fadeTransitionPage(const HomeScreen());
         }
         return _fadeTransitionPage(
-          riverpod.Consumer(
-            builder: (context, ref, _) {
-              final viewModel = LobbyViewModel(
-                ref: ref,
-                lobbyRepository: LobbyRepository(),
-              );
-              viewModel.initialize(
-                lobbyId: data.lobbyId,
-                playerName: data.playerName,
-                isHost: data.isHost,
-                gameType: data.gameType,
-              );
-              return const GameScreen();
-            },
+          p.ChangeNotifierProvider.value(
+            value: extra,
+            child: const GameScreen(),
           ),
         );
       },
@@ -136,25 +112,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/game-settings',
       pageBuilder: (context, state) {
-        final data = state.extra;
-        if (data is! ReconnectData) {
+        final extra = state.extra;
+        if (extra is! LobbyViewModel) {
           return _fadeTransitionPage(const HomeScreen());
         }
         return _fadeTransitionPage(
-          riverpod.Consumer(
-            builder: (context, ref, _) {
-              final viewModel = LobbyViewModel(
-                ref: ref,
-                lobbyRepository: LobbyRepository(),
-              );
-              viewModel.initialize(
-                lobbyId: data.lobbyId,
-                playerName: data.playerName,
-                isHost: data.isHost,
-                gameType: data.gameType,
-              );
-              return const GameSettingsScreen();
-            },
+          p.ChangeNotifierProvider.value(
+            value: extra,
+            child: const GameSettingsScreen(),
           ),
         );
       },

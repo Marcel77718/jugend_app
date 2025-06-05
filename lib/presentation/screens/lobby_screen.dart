@@ -33,18 +33,25 @@ class LobbyScreen extends StatefulWidget {
 }
 
 class _LobbyScreenState extends State<LobbyScreen> {
+  late final LobbyViewModel _viewModel;
   bool hasLeft = false;
+  bool _ownViewModel = false;
 
   @override
   void initState() {
     super.initState();
+    _viewModel = widget.viewModel ?? LobbyViewModel(lobbyRepository: LobbyRepository());
+    _ownViewModel = widget.viewModel == null;
+    _viewModel.initialize(
+      lobbyId: widget.lobbyId,
+      playerName: widget.playerName,
+      isHost: widget.isHost,
+      gameType: widget.gameType,
+    );
     // Callback für Namenskonflikt-Dialog setzen
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel =
-          widget.viewModel ??
-          p.Provider.of<LobbyViewModel>(context, listen: false);
-      viewModel.setOnMustChangeName(() async {
-        if (viewModel.mustChangeName && context.mounted) {
+      _viewModel.setOnMustChangeName(() async {
+        if (_viewModel.mustChangeName && context.mounted) {
           final newName = await showDialog<String>(
             context: context,
             barrierDismissible: false,
@@ -81,7 +88,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           );
           if (newName != null && newName.isNotEmpty && context.mounted) {
             if (!mounted) return;
-            await viewModel.updatePlayerName(context, newName);
+            await _viewModel.updatePlayerName(context, newName);
           }
         }
       });
@@ -91,40 +98,31 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer(
-      builder: (context, ref, _) {
-        final viewModel =
-            widget.viewModel ??
-            LobbyViewModel(ref: ref, lobbyRepository: LobbyRepository());
-        if (widget.viewModel == null) {
-          viewModel.initialize(
-            lobbyId: widget.lobbyId,
-            playerName: widget.playerName,
-            isHost: widget.isHost,
-            gameType: widget.gameType,
-          );
-        }
-        if (!viewModel.viewModelInitialized) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        // Clients hören auf settingsStarted
-        if (!viewModel.isHost) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            viewModel.listenForSettingsStart(context);
-          });
-        }
-        final isKicked =
-            viewModel.players.isNotEmpty &&
-            !viewModel.players.any((p) => p['id'] == viewModel.deviceId);
-        if (isKicked && !hasLeft) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            showRedSnackbar(context, 'Du wurdest vom Host gekickt.');
-            context.go('/');
-          });
-        }
+    return p.ChangeNotifierProvider.value(
+      value: _viewModel,
+      child: p.Consumer<LobbyViewModel>(
+        builder: (context, viewModel, _) {
+          if (!viewModel.viewModelInitialized) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          // Clients hören auf settingsStarted
+          if (!viewModel.isHost) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              viewModel.listenForSettingsStart(context);
+            });
+          }
+          final isKicked =
+              viewModel.players.isNotEmpty &&
+              !viewModel.players.any((p) => p['id'] == viewModel.deviceId);
+          if (isKicked && !hasLeft) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              showRedSnackbar(context, 'Du wurdest vom Host gekickt.');
+              context.go('/');
+            });
+          }
         final sortedPlayers = [
           ...viewModel.players.where((p) => p['id'] == viewModel.deviceId),
           ...viewModel.players.where((p) => p['id'] != viewModel.deviceId),
@@ -357,5 +355,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
     if (shouldKick) {
       await viewModel.kickPlayer(playerId);
     }
+  }
+
+  @override
+  void dispose() {
+    if (_ownViewModel) {
+      _viewModel.dispose();
+    }
+    super.dispose();
   }
 }

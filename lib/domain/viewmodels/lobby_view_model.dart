@@ -13,7 +13,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
-  final WidgetRef ref;
   late String _lobbyId;
   late String _playerName;
   late bool _isHost;
@@ -32,8 +31,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   StreamSubscription? _playerStreamSub;
   final ILobbyRepository _lobbyRepository;
 
-  LobbyViewModel({required this.ref, ILobbyRepository? lobbyRepository})
-    : _lobbyRepository = lobbyRepository ?? LobbyRepository();
+  LobbyViewModel({ILobbyRepository? lobbyRepository})
+      : _lobbyRepository = lobbyRepository ?? LobbyRepository();
 
   Future<void> initialize({
     required String lobbyId,
@@ -113,7 +112,10 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze initialen Status auf 'lobby' und currentLobbyId
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      await ref.read(authViewModelProvider.notifier).setPresenceStatus('lobby');
+      final container = ProviderContainer();
+      await container
+          .read(authViewModelProvider.notifier)
+          .setPresenceStatus('lobby');
       await _firestore.collection('users').doc(currentUser.uid).update({
         'currentLobbyId': _lobbyId,
       });
@@ -336,9 +338,23 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     if (lobbyStage == 'lobby') {
       GoRouter.of(context).go('/lobby', extra: data);
     } else if (lobbyStage == 'settings') {
-      GoRouter.of(context).go('/game-settings', extra: data);
+      final vm = LobbyViewModel(lobbyRepository: _lobbyRepository);
+      await vm.initialize(
+        lobbyId: data.lobbyId,
+        playerName: data.playerName,
+        isHost: data.isHost,
+        gameType: data.gameType,
+      );
+      GoRouter.of(context).go('/game-settings', extra: vm);
     } else if (lobbyStage == 'game') {
-      GoRouter.of(context).go('/game', extra: data);
+      final vm = LobbyViewModel(lobbyRepository: _lobbyRepository);
+      await vm.initialize(
+        lobbyId: data.lobbyId,
+        playerName: data.playerName,
+        isHost: data.isHost,
+        gameType: data.gameType,
+      );
+      GoRouter.of(context).go('/game', extra: vm);
     } else {
       GoRouter.of(context).go('/lobby', extra: data);
     }
@@ -352,7 +368,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
       // Setze Status auf online (wenn eingeloggt) oder offline und entferne currentLobbyId
       if (currentUser != null) {
-        await ref
+        final container = ProviderContainer();
+        await container
             .read(authViewModelProvider.notifier)
             .setPresenceStatus('online');
         await _firestore.collection('users').doc(currentUser.uid).update({
@@ -392,7 +409,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
         await _firestore.collection('lobbies').doc(_lobbyId).delete();
       }
 
-      await ref
+      final container = ProviderContainer();
+      await container
           .read(authViewModelProvider.notifier)
           .setPresenceStatus('online');
     } catch (_) {}
@@ -519,27 +537,27 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze Status auf 'game'
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      await ref.read(authViewModelProvider.notifier).setPresenceStatus('game');
+      final container = ProviderContainer();
+      await container
+          .read(authViewModelProvider.notifier)
+          .setPresenceStatus('game');
       await _firestore.collection('users').doc(currentUser.uid).update({
         'currentLobbyId': _lobbyId,
       });
     }
-    final reconnectData = ReconnectData(
-      lobbyId: _lobbyId,
-      playerName: _playerName,
-      isHost: _isHost,
-      gameType: _gameType,
-    );
     if (_isHost) {
       await docRef.update({'gameStarted': true, 'lobbyStage': 'game'});
       if (!context.mounted) return;
-      GoRouter.of(context).go('/game', extra: reconnectData);
+      GoRouter.of(context).go('/game', extra: this);
     } else {
       if (!context.mounted) return;
-      GoRouter.of(context).go('/game-settings', extra: reconnectData);
+      GoRouter.of(context).go('/game-settings', extra: this);
     }
 
-    await ref.read(authViewModelProvider.notifier).setPresenceStatus('game');
+    final container = ProviderContainer();
+    await container
+        .read(authViewModelProvider.notifier)
+        .setPresenceStatus('game');
   }
 
   void listenForGameStart(BuildContext context) {
@@ -548,7 +566,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       final data = snapshot.data();
       if (data != null && data['gameStarted'] == true) {
         if (context.mounted) {
-          GoRouter.of(context).go('/game');
+          GoRouter.of(context).go('/game', extra: this);
         }
       }
     });
@@ -560,21 +578,18 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze Status auf 'lobby' (falls noch nicht geschehen) und aktualisiere lastActive
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      await ref.read(authViewModelProvider.notifier).setPresenceStatus('lobby');
+      final container = ProviderContainer();
+      await container
+          .read(authViewModelProvider.notifier)
+          .setPresenceStatus('lobby');
       await _firestore.collection('users').doc(currentUser.uid).update({
         'currentLobbyId': _lobbyId,
       });
     }
     if (_isHost) {
       await docRef.update({'settingsStarted': true, 'lobbyStage': 'settings'});
-      final data = ReconnectData(
-        lobbyId: _lobbyId,
-        playerName: _playerName,
-        isHost: _isHost,
-        gameType: _gameType,
-      );
       if (!context.mounted) return;
-      GoRouter.of(context).go('/game-settings', extra: data);
+      GoRouter.of(context).go('/game-settings', extra: this);
     }
   }
 
@@ -583,14 +598,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     docRef.snapshots().listen((snapshot) {
       final data = snapshot.data();
       if (data != null && data['settingsStarted'] == true) {
-        final reconnectData = ReconnectData(
-          lobbyId: _lobbyId,
-          playerName: _playerName,
-          isHost: _isHost,
-          gameType: _gameType,
-        );
         if (context.mounted) {
-          GoRouter.of(context).go('/game-settings', extra: reconnectData);
+          GoRouter.of(context).go('/game-settings', extra: this);
         }
       }
     });
