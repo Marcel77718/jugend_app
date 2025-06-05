@@ -40,6 +40,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     required String playerName,
     required bool isHost,
     required String gameType,
+    BuildContext? context,
   }) async {
     // Registriere Lifecycle Observer
     WidgetsBinding.instance.addObserver(this);
@@ -112,8 +113,9 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _viewModelInitialized = true;
     // Setze initialen Status auf 'lobby' und currentLobbyId
     final currentUser = AuthService().currentUser;
-    if (currentUser != null) {
-      final container = ProviderContainer();
+    if (currentUser != null && context != null) {
+      if (!context.mounted) return;
+      final container = ProviderScope.containerOf(context);
       await container
           .read(authViewModelProvider.notifier)
           .setPresenceStatus('lobby');
@@ -347,15 +349,15 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> leaveLobby() async {
+  Future<void> leaveLobby({BuildContext? context}) async {
     try {
       final currentUser = AuthService().currentUser;
       await _lobbyRef.doc(_deviceId).delete();
       await _lobbyRepository.clearReconnectData(_deviceId);
-
       // Setze Status auf online (wenn eingeloggt) oder offline und entferne currentLobbyId
-      if (currentUser != null) {
-        final container = ProviderContainer();
+      if (currentUser != null && context != null) {
+        if (!context.mounted) return;
+        final container = ProviderScope.containerOf(context);
         await container
             .read(authViewModelProvider.notifier)
             .setPresenceStatus('online');
@@ -363,7 +365,6 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
           'currentLobbyId': FieldValue.delete(), // Lobby-ID entfernen
         });
       }
-
       // Host verlässt die Lobby: Rolle zufällig übertragen, aber nur solange settingsStarted nicht true ist
       final doc = await _firestore.collection('lobbies').doc(_lobbyId).get();
       final settingsStarted = doc.data()?['settingsStarted'] == true;
@@ -396,10 +397,13 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
         await _firestore.collection('lobbies').doc(_lobbyId).delete();
       }
 
-      final container = ProviderContainer();
-      await container
-          .read(authViewModelProvider.notifier)
-          .setPresenceStatus('online');
+      if (context != null && currentUser != null) {
+        if (!context.mounted) return;
+        final container = ProviderScope.containerOf(context);
+        await container
+            .read(authViewModelProvider.notifier)
+            .setPresenceStatus('online');
+      }
     } catch (e) {
       print('Fehler beim Verlassen der Lobby: \\${e.toString()}');
       // Optional: Fehler dem Nutzer anzeigen, falls Kontext verfügbar
@@ -528,7 +532,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze Status auf 'game'
     final currentUser = AuthService().currentUser;
     if (currentUser != null) {
-      final container = ProviderContainer();
+      final container = ProviderScope.containerOf(context);
       await container
           .read(authViewModelProvider.notifier)
           .setPresenceStatus('game');
@@ -550,8 +554,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       if (!context.mounted) return;
       GoRouter.of(context).go(AppRoutes.gameSettings, extra: reconnectData);
     }
-
-    final container = ProviderContainer();
+    final container = ProviderScope.containerOf(context);
     await container
         .read(authViewModelProvider.notifier)
         .setPresenceStatus('game');
@@ -575,7 +578,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze Status auf 'lobby' (falls noch nicht geschehen) und aktualisiere lastActive
     final currentUser = AuthService().currentUser;
     if (currentUser != null) {
-      final container = ProviderContainer();
+      final container = ProviderScope.containerOf(context);
       await container
           .read(authViewModelProvider.notifier)
           .setPresenceStatus('lobby');

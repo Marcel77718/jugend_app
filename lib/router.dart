@@ -93,6 +93,7 @@ final GoRouter appRouter = GoRouter(
                         playerName: data.playerName,
                         isHost: data.isHost,
                         gameType: data.gameType,
+                        context: context,
                       ),
             child: LobbyScreen(
               lobbyId: data.lobbyId,
@@ -122,6 +123,7 @@ final GoRouter appRouter = GoRouter(
                         playerName: data.playerName,
                         isHost: data.isHost,
                         gameType: data.gameType,
+                        context: context,
                       ),
             child: const GameScreen(),
           ),
@@ -145,6 +147,7 @@ final GoRouter appRouter = GoRouter(
                         playerName: data.playerName,
                         isHost: data.isHost,
                         gameType: data.gameType,
+                        context: context,
                       ),
             child: const GameSettingsScreen(),
           ),

@@ -95,6 +95,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             playerName: widget.playerName,
             isHost: widget.isHost,
             gameType: widget.gameType,
+            context: context,
           ),
       child: p.Consumer<LobbyViewModel>(
         builder: (context, viewModel, _) {
@@ -312,7 +313,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     if (shouldLeave) {
       hasLeft = true;
-      await viewModel.leaveLobby();
+      await viewModel.leaveLobby(context: context);
       if (context.mounted) {
         showNeutralSnackbar(context, 'Du hast die Lobby verlassen.');
         context.go(AppRoutes.home);
