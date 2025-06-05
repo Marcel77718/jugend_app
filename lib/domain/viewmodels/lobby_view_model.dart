@@ -8,10 +8,10 @@ import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:jugend_app/data/repositories/lobby_repository.dart';
 import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/core/app_routes.dart';
+import 'package:jugend_app/data/services/auth_service.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   late String _lobbyId;
@@ -69,7 +69,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     String? tag;
     String? userUid;
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = AuthService().currentUser;
       if (user != null) {
         final userDoc =
             await FirebaseFirestore.instance
@@ -111,7 +111,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _listenToPlayers();
     _viewModelInitialized = true;
     // Setze initialen Status auf 'lobby' und currentLobbyId
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = AuthService().currentUser;
     if (currentUser != null) {
       final container = ProviderContainer();
       await container
@@ -134,7 +134,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = AuthService().currentUser;
     if (currentUser == null) return; // Nur für eingeloggte User
 
     // Keine Presence- oder lastActive-Updates mehr bei App-Lifecycle-Events!
@@ -349,7 +349,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> leaveLobby() async {
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUser = AuthService().currentUser;
       await _lobbyRef.doc(_deviceId).delete();
       await _lobbyRepository.clearReconnectData(_deviceId);
 
@@ -467,7 +467,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     try {
       String? photoUrl;
       try {
-        final user = FirebaseAuth.instance.currentUser;
+        final user = AuthService().currentUser;
         if (user != null) {
           final userDoc =
               await FirebaseFirestore.instance
@@ -526,7 +526,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Host setzt gameStarted auf true, Clients lauschen darauf
     final docRef = _firestore.collection('lobbies').doc(_lobbyId);
     // Setze Status auf 'game'
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = AuthService().currentUser;
     if (currentUser != null) {
       final container = ProviderContainer();
       await container
@@ -573,7 +573,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Host setzt settingsStarted auf true, Clients lauschen darauf
     final docRef = _firestore.collection('lobbies').doc(_lobbyId);
     // Setze Status auf 'lobby' (falls noch nicht geschehen) und aktualisiere lastActive
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = AuthService().currentUser;
     if (currentUser != null) {
       final container = ProviderContainer();
       await container

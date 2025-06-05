@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jugend_app/data/services/auth_service.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -157,8 +158,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           viewModel.setSignedOut();
         }
       }
-      if (authState.status == AuthStatus.signedIn) {
+      // Weiterleitung ins Hub NUR wenn die E-Mail verifiziert ist
+      final isVerified = AuthService().currentUser?.emailVerified ?? false;
+      if (authState.status == AuthStatus.signedIn && isVerified) {
         context.go('/');
+      } else if (authState.status == AuthStatus.signedIn && !isVerified) {
+        setState(() {
+          _showVerificationNotice = true;
+        });
       }
     });
 
@@ -357,10 +364,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             : () => _handleGoogle(viewModel),
                   ),
                 ),
-                if (authState.error != null)
-                  const SizedBox(
-                    height: 0,
-                  ), // Fehler wird jetzt als Snackbar angezeigt
+                if (authState.error != null && authState.error != 'success')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: Text(
+                      authState.error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
               ],
             ),
           ),
