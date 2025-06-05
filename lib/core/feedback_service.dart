@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'logging_service.dart';
 
 class FeedbackService {
-  FeedbackService._();
-  static final FeedbackService instance = FeedbackService._();
+  static final FeedbackService _instance = FeedbackService._internal();
+  static FeedbackService get instance => _instance;
+
+  FeedbackService._internal();
 
   final _snackbarController = StreamController<String>.broadcast();
   final _errorController = StreamController<String>.broadcast();
@@ -12,10 +15,21 @@ class FeedbackService {
 
   void showSnackbar(String message) {
     _snackbarController.add(message);
+    LoggingService.instance.log(message, level: LogLevel.info);
   }
 
-  void showError(String message) {
-    _errorController.add(message);
+  void showError(String error, [StackTrace? stackTrace]) {
+    _errorController.add(error);
+    LoggingService.instance.log(
+      error,
+      level: LogLevel.error,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  void showWarning(String warning) {
+    LoggingService.instance.log(warning, level: LogLevel.warning);
   }
 
   void dispose() {

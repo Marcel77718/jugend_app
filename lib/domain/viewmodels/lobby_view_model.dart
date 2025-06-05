@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/core/app_routes.dart';
 import 'package:jugend_app/data/services/auth_service.dart';
+import 'package:jugend_app/core/logging_service.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   late String _lobbyId;
@@ -85,7 +86,12 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
         tag = null;
         userUid = null;
       }
-    } catch (_) {
+    } catch (e) {
+      LoggingService.instance.log(
+        'Fehler beim Laden der Lobby',
+        level: LogLevel.error,
+        error: e,
+      );
       photoUrl = null;
       tag = null;
       userUid = null;
@@ -405,7 +411,11 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
             .setPresenceStatus('online');
       }
     } catch (e) {
-      print('Fehler beim Verlassen der Lobby: \\${e.toString()}');
+      LoggingService.instance.log(
+        'Fehler beim Verlassen der Lobby',
+        level: LogLevel.error,
+        error: e,
+      );
       // Optional: Fehler dem Nutzer anzeigen, falls Kontext verfügbar
       // Hinweis: context ist hier nicht direkt verfügbar, daher nur Logging
     }

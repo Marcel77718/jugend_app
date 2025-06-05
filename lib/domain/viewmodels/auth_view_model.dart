@@ -5,6 +5,7 @@ import 'package:jugend_app/data/models/user_profile.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:jugend_app/core/logging_service.dart';
 
 enum AuthStatus { loading, signedOut, signedIn }
 
@@ -118,9 +119,12 @@ class AuthViewModel extends StateNotifier<AuthState> {
       }
       // Kein State setzen, Auth-Stream übernimmt
     } catch (e) {
-      // Debug-Log für Fehler
-      // ignore: avoid_print
-      print('AUTH-LOGIN-ERROR: ${e.toString()}');
+      // Ersetze den print-Aufruf
+      LoggingService.instance.log(
+        'Fehler bei der Authentifizierung',
+        level: LogLevel.error,
+        error: e,
+      );
       // Allgemeine Fehlermeldung, sprachabhängig
       String msg =
           (locale == 'en')

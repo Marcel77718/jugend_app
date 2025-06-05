@@ -3,54 +3,95 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jugend_app/router.dart';
 import 'firebase_options.dart';
 import 'package:jugend_app/core/feedback_service.dart';
+import 'package:jugend_app/core/logging_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' show Platform;
 
 final localeProvider = StateProvider<Locale?>((ref) => const Locale('de'));
 
+Future<void> initializeFirebase() async {
+  try {
+    if (Firebase.apps.isEmpty) {
+      if (kIsWeb) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } else if (!Platform.isAndroid && !Platform.isIOS) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } else {
+        await Firebase.initializeApp();
+      }
+
+      // Initialisiere Crashlytics
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+        !kDebugMode,
+      );
+
+      // Setze Benutzer-ID für Crashlytics, falls verfügbar
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseCrashlytics.instance.setUserIdentifier(user.uid);
+      }
+
+      LoggingService.instance.log(
+        'Firebase erfolgreich initialisiert',
+        level: LogLevel.info,
+      );
+    }
+  } catch (e, stackTrace) {
+    LoggingService.instance.log(
+      'Fehler bei der Firebase-Initialisierung',
+      level: LogLevel.error,
+      error: e,
+      stackTrace: stackTrace,
+    );
+    rethrow;
+  }
+}
+
 void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      bool firebaseInitError = false;
-      String? firebaseInitErrorMsg;
 
       try {
-        if (Firebase.apps.isEmpty) {
-          if (kIsWeb) {
-            await Firebase.initializeApp(
-              options: DefaultFirebaseOptions.currentPlatform,
-            );
-          } else if (!Platform.isAndroid && !Platform.isIOS) {
-            await Firebase.initializeApp(
-              options: DefaultFirebaseOptions.currentPlatform,
-            );
-          } else {
-            await Firebase.initializeApp();
-          }
-        }
-      } catch (e) {
-        firebaseInitError = true;
-        firebaseInitErrorMsg = e.toString();
-      }
-
-      runApp(
-        ProviderScope(
-          child: MyApp(
-            firebaseInitError: firebaseInitError,
-            firebaseInitErrorMsg: firebaseInitErrorMsg,
+        await initializeFirebase();
+        runApp(const ProviderScope(child: MyApp()));
+      } catch (e, stackTrace) {
+        LoggingService.instance.log(
+          'Kritischer Fehler beim App-Start',
+          level: LogLevel.fatal,
+          error: e,
+          stackTrace: stackTrace,
+        );
+        runApp(
+          ProviderScope(
+            child: MyApp(
+              firebaseInitError: true,
+              firebaseInitErrorMsg: e.toString(),
+            ),
           ),
-        ),
-      );
+        );
+      }
     },
     (error, stack) {
+      LoggingService.instance.log(
+        'Unbehandelter Fehler',
+        level: LogLevel.fatal,
+        error: error,
+        stackTrace: stack,
+      );
       FeedbackService.instance.showError(error.toString());
     },
   );
