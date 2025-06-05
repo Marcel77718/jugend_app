@@ -9,7 +9,6 @@ import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
-import 'package:jugend_app/data/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LobbyJoinScreen extends StatefulWidget {
@@ -36,8 +35,8 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
 
     // Prüfe, ob die Lobby existiert
     final exists = await LobbyService.lobbyExists(lobbyId);
+    if (!mounted) return;
     if (!exists) {
-      if (!mounted) return;
       showRedSnackbar(context, AppLocalizations.of(context)!.errorLobbyInvalid);
       return;
     }
@@ -69,6 +68,7 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
       if (isOtherLoggedIn) {
         // Dialog für neuen Namen
         final tempNameController = TextEditingController(text: name);
+        if (!mounted) return;
         final newName = await showDialog<String>(
           context: context,
           builder:

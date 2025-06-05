@@ -7,7 +7,6 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jugend_app/main.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -207,22 +206,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ).showSnackBar(SnackBar(content: Text('Fehler beim Löschen: $e')));
   }
 
-  void _showPasswordChangedSnackbar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Passwort geändert.'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showPasswordChangeErrorSnackbar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fehler beim Ändern des Passworts.')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authViewModelProvider);
@@ -407,6 +390,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         );
                         if (!mounted) return;
                         if (result != null && result.length >= 6) {
+                          if (!context.mounted) return;
                           final messenger = ScaffoldMessenger.of(context);
                           await ref
                               .read(authViewModelProvider.notifier)

@@ -7,7 +7,6 @@ import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
-import 'package:jugend_app/data/models/user_profile.dart';
 
 class LobbyCreateScreen extends StatefulWidget {
   const LobbyCreateScreen({super.key});
@@ -50,8 +49,7 @@ class _LobbyCreateScreenState extends State<LobbyCreateScreen> {
         final auth = ref.watch(authViewModelProvider);
         final user = auth.profile;
         final isLoggedIn = auth.status == AuthStatus.signedIn && user != null;
-        final defaultName =
-            isLoggedIn ? (user?.displayName ?? 'Unbekannt') : '';
+        final defaultName = isLoggedIn ? (user.displayName ?? 'Unbekannt') : '';
         if (isLoggedIn) {
           // Wenn eingeloggt: sofort Lobby erstellen und weiterleiten
           WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -30,13 +30,9 @@ class FriendService {
 
   // Freundschaftsanfragen laden
   Stream<List<FriendRequest>> requestsStream(String uid) {
-    print('FriendService: Listening for requests for user $uid');
     return getUserRequestsRef(
       uid,
     ).where('status', isEqualTo: 'pending').snapshots().map((snapshot) {
-      print(
-        'FriendService: Received snapshot for user $uid with ${snapshot.docs.length} documents',
-      );
       return snapshot.docs
           .map(
             (doc) => FriendRequest.fromJson(doc.data() as Map<String, dynamic>),

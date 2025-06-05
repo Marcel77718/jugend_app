@@ -23,7 +23,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   String? _searchError;
   bool _isSearching = false;
   String? _searchResult;
-  String? _searchResultUid;
   String? _searchResultTag;
   String? _searchResultName;
   bool _requestSent = false;
@@ -76,7 +75,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     }
     setState(() {
       _searchResult = '$name#$tag';
-      _searchResultUid = user['uid'];
       _searchResultName = name;
       _searchResultTag = tag;
       _isSearching = false;
@@ -365,7 +363,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                           ],
                         ),
                         title: Text(
-                          '$displayName${tag.isNotEmpty ? '#$tag' : ''}',
+                          displayName + (tag.isNotEmpty ? '#$tag' : ''),
                         ),
                         subtitle: Text(_statusText(status, lobbyId, userData)),
                         trailing: Row(
@@ -403,7 +401,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                                                   'Unbekannt',
                                               isHost: false,
                                               gameType:
-                                                  'Impostor', // TODO: auslesen
+                                                  userData['gameType'] ??
+                                                  'Impostor',
                                             ),
                                           );
                                         },
@@ -424,7 +423,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                                             'Freund entfernen?',
                                           ),
                                           content: Text(
-                                            'Möchtest du ${displayName} wirklich entfernen?',
+                                            'Möchtest du $displayName wirklich entfernen?',
                                           ),
                                           actions: [
                                             TextButton(

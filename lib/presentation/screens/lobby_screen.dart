@@ -11,7 +11,6 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/friend_view_model.dart';
 import 'package:jugend_app/data/models/friend.dart';
-import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 
 class LobbyScreen extends StatefulWidget {
   final String lobbyId;
@@ -77,6 +76,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             },
           );
           if (newName != null && newName.isNotEmpty && context.mounted) {
+            if (!mounted) return;
             await viewModel.updatePlayerName(context, newName);
           }
         }
@@ -113,10 +113,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               !viewModel.players.any((p) => p['id'] == viewModel.deviceId);
           if (isKicked && !hasLeft) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted) {
-                showRedSnackbar(context, 'Du wurdest vom Host gekickt.');
-                context.go('/');
-              }
+              if (!mounted) return;
+              showRedSnackbar(context, 'Du wurdest vom Host gekickt.');
+              context.go('/');
             });
           }
           final sortedPlayers = [
@@ -158,7 +157,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       Expanded(
                         child: Consumer(
                           builder: (context, ref, _) {
-                            final auth = ref.watch(authViewModelProvider);
                             final friendViewModel = ref.watch(
                               friendViewModelProvider,
                             );

@@ -6,7 +6,6 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/data/models/user_profile.dart';
-import 'package:jugend_app/domain/viewmodels/friend_view_model.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -40,7 +39,6 @@ class HomeScreen extends StatelessWidget {
     UserProfile? profile,
     riverpod.WidgetRef ref,
   ) {
-    final friendViewModel = ref.watch(friendViewModelProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
@@ -145,13 +143,11 @@ class _HubTile extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
-  final int notificationCount;
 
   const _HubTile({
     required this.label,
     required this.icon,
     required this.onTap,
-    this.notificationCount = 0,
   });
 
   @override
@@ -167,37 +163,7 @@ class _HubTile extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(icon, size: 48),
-                  if (notificationCount > 0)
-                    Positioned(
-                      right: -5,
-                      top: -5,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
-                        child: Text(
-                          '$notificationCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+              Stack(clipBehavior: Clip.none, children: [Icon(icon, size: 48)]),
               const SizedBox(height: 8),
               Text(label, style: Theme.of(context).textTheme.titleMedium),
             ],

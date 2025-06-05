@@ -22,7 +22,6 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   bool _isReady = false;
   List<Map<String, dynamic>> _players = [];
   String? _hostId;
-  bool _isInBackground = false;
   Timer? _activityTimer;
   bool _mustChangeName = false;
   VoidCallback? _onMustChangeName;
@@ -543,6 +542,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       if (!context.mounted) return;
       GoRouter.of(context).go('/game', extra: reconnectData);
     } else {
+      if (!context.mounted) return;
       GoRouter.of(context).go('/game-settings', extra: reconnectData);
     }
 

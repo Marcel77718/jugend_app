@@ -27,7 +27,6 @@ class FriendViewModel extends ChangeNotifier {
   // Neue Methode, um die Anzahl der Anfragen als Stream bereitzustellen
   Stream<int> get pendingRequestCountStream =>
       _service.requestsStream(myUid).map((list) {
-        print('FriendViewModel: Received list with ${list.length} requests');
         return list.length;
       });
 
