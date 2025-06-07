@@ -180,7 +180,6 @@ class FeedbackListener extends ConsumerStatefulWidget {
 class _FeedbackListenerState extends ConsumerState<FeedbackListener> {
   StreamSubscription<String>? _snackbarSub;
   StreamSubscription<String>? _errorSub;
-  // Timer? _activityTimer; // Entfernt
 
   @override
   void initState() {

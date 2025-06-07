@@ -28,10 +28,6 @@ class FeedbackService {
     );
   }
 
-  void showWarning(String warning) {
-    LoggingService.instance.log(warning, level: LogLevel.warning);
-  }
-
   void dispose() {
     _snackbarController.close();
     _errorController.close();

@@ -62,7 +62,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       setState(() {
         _showVerificationNotice = true;
       });
-      showGreenSnackbar(
+      SnackbarHelper.success(
         context,
         'Verifizierungs-E-Mail wurde gesendet. Bitte prüfe deine E-Mails.',
       );
@@ -118,43 +118,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           return;
         }
         if (authState.error == 'reset_success') {
-          showGreenSnackbar(context, 'Passwort-Reset-E-Mail wurde gesendet.');
+          SnackbarHelper.success(
+            context,
+            'Passwort-Reset-E-Mail wurde gesendet.',
+          );
           viewModel.clearError();
         } else if (authState.error == 'reset_failed') {
-          showRedSnackbar(context, 'Fehler beim Senden der Reset-E-Mail.');
+          SnackbarHelper.error(context, 'Fehler beim Senden der Reset-E-Mail.');
           viewModel.clearError();
         } else if (authState.error == 'verify_success') {
           if (!_showVerificationNotice) {
-            showGreenSnackbar(context, 'Verifizierungs-E-Mail wurde gesendet.');
+            SnackbarHelper.success(
+              context,
+              'Verifizierungs-E-Mail wurde gesendet.',
+            );
           }
           viewModel.clearError();
         } else if (authState.error == 'verify_failed') {
           if (!_showVerificationNotice) {
-            showRedSnackbar(
+            SnackbarHelper.error(
               context,
               'Fehler beim Senden der Verifizierungs-E-Mail.',
             );
           }
           viewModel.clearError();
         } else if (authState.error!.contains('Es gibt keinen Account')) {
-          showRedSnackbar(context, authState.error!);
+          SnackbarHelper.error(context, authState.error!);
           viewModel.setSignedOut();
         } else if (authState.error!.contains('Falsches Passwort')) {
-          showRedSnackbar(context, authState.error!);
+          SnackbarHelper.error(context, authState.error!);
           viewModel.setSignedOut();
         } else if (authState.error!.contains(
           'Diese E-Mail ist bereits registriert.',
         )) {
-          showRedSnackbar(context, authState.error!);
+          SnackbarHelper.error(context, authState.error!);
           viewModel.setSignedOut();
         } else if (authState.error!.contains('Ungültige E-Mail-Adresse.')) {
-          showRedSnackbar(context, authState.error!);
+          SnackbarHelper.error(context, authState.error!);
           viewModel.setSignedOut();
         } else if (authState.error!.contains('Das Passwort ist zu schwach.')) {
-          showRedSnackbar(context, authState.error!);
+          SnackbarHelper.error(context, authState.error!);
           viewModel.setSignedOut();
         } else if (authState.error != null && authState.error != 'success') {
-          showRedSnackbar(context, authState.error!);
+          SnackbarHelper.error(context, authState.error!);
           viewModel.setSignedOut();
         }
       }

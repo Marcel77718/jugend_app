@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
-import 'package:jugend_app/core/error_service.dart';
+import 'package:jugend_app/core/snackbar_helper.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
@@ -27,7 +27,7 @@ class LoginScreen extends ConsumerWidget {
                   await authViewModel.signInWithGoogle();
                 } catch (e) {
                   if (context.mounted) {
-                    ErrorService.showErrorSnackbar(context, e.toString());
+                    SnackbarHelper.error(context, e.toString());
                   }
                 }
               },

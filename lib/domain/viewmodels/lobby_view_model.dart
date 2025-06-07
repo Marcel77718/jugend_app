@@ -468,7 +468,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
     if (nameExists) {
       if (context.mounted) {
-        showRedSnackbar(context, 'Name existiert bereits in der Lobby');
+        SnackbarHelper.error(context, 'Name existiert bereits in der Lobby');
       }
       return;
     }
@@ -506,11 +506,11 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       notifyListeners();
 
       if (context.mounted) {
-        showGreenSnackbar(context, 'Name erfolgreich geändert');
+        SnackbarHelper.success(context, 'Name erfolgreich geändert');
       }
     } catch (e) {
       if (context.mounted) {
-        showRedSnackbar(context, 'Fehler: ${e.toString()}');
+        SnackbarHelper.error(context, 'Fehler: ${e.toString()}');
       }
     }
   }

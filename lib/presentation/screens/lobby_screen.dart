@@ -116,7 +116,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           if (isKicked && !hasLeft) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
-              showRedSnackbar(context, 'Du wurdest vom Host gekickt.');
+              SnackbarHelper.error(context, 'Du wurdest vom Host gekickt.');
               context.go(AppRoutes.home);
             });
           }
@@ -315,7 +315,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       hasLeft = true;
       await viewModel.leaveLobby(context: context);
       if (context.mounted) {
-        showNeutralSnackbar(context, 'Du hast die Lobby verlassen.');
+        SnackbarHelper.neutral(context, 'Du hast die Lobby verlassen.');
         context.go(AppRoutes.home);
       }
     }

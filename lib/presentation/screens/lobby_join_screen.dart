@@ -38,7 +38,10 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
     final exists = await LobbyService.lobbyExists(lobbyId);
     if (!mounted) return;
     if (!exists) {
-      showRedSnackbar(context, AppLocalizations.of(context)!.errorLobbyInvalid);
+      SnackbarHelper.error(
+        context,
+        AppLocalizations.of(context)!.errorLobbyInvalid,
+      );
       return;
     }
 
@@ -109,7 +112,7 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
           (p) => (p['name'] as String).toLowerCase() == newName.toLowerCase(),
         );
         if (nameTaken) {
-          showRedSnackbar(context, 'Name existiert bereits in der Lobby');
+          SnackbarHelper.error(context, 'Name existiert bereits in der Lobby');
           return;
         }
         return _joinLobby(newName, ref);
@@ -119,7 +122,10 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
     // Für nicht eingeloggte Joiner weiterhin blockieren, wenn Name existiert
     if (!isLoggedIn && nameExists) {
       if (!mounted) return;
-      showRedSnackbar(context, AppLocalizations.of(context)!.errorNameTaken);
+      SnackbarHelper.error(
+        context,
+        AppLocalizations.of(context)!.errorNameTaken,
+      );
       return;
     }
 

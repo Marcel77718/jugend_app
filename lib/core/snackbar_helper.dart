@@ -28,15 +28,3 @@ class SnackbarHelper {
     );
   }
 }
-
-void showGreenSnackbar(BuildContext context, String message) {
-  SnackbarHelper.success(context, message);
-}
-
-void showRedSnackbar(BuildContext context, String message) {
-  SnackbarHelper.error(context, message);
-}
-
-void showNeutralSnackbar(BuildContext context, String message) {
-  SnackbarHelper.neutral(context, message);
-}
