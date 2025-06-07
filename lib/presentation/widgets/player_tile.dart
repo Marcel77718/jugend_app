@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jugend_app/services/image_service.dart';
 
 class PlayerTile extends StatelessWidget {
   final Map<String, dynamic> player;
@@ -111,15 +112,15 @@ class PlayerTile extends StatelessWidget {
                         child: InteractiveViewer(
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: Image.network(
-                              imageUrl,
-                              fit: BoxFit.contain,
-                              errorBuilder:
-                                  (c, o, s) => const Icon(
+                            child: ImageService.instance
+                                .getOptimizedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  fit: BoxFit.contain,
+                                  errorWidget: const Icon(
                                     Icons.account_circle,
                                     size: 120,
                                   ),
-                            ),
+                                ),
                           ),
                         ),
                       ),

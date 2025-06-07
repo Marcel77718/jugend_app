@@ -1,13 +1,27 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:jugend_app/main.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/services.dart';
+import 'package:jugend_app/data/models/user_profile.dart';
+
+final userProfileProvider = StreamProvider<UserProfile>((ref) {
+  final authState = ref.watch(authViewModelProvider);
+  if (authState.profile == null) {
+    return Stream.value(
+      UserProfile(uid: '', createdAt: DateTime.now(), tag: '0000'),
+    );
+  }
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(authState.profile!.uid)
+      .snapshots()
+      .map((doc) => UserProfile.fromFirestore(doc));
+});
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,19 +32,25 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _nameController = TextEditingController();
-  bool _isEditingName = false;
-  bool _isUploading = false;
-  String? _selectedLocale;
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedLocale = 'de';
+    _nameController.text =
+        ref.read(authViewModelProvider).profile?.displayName ?? '';
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -72,11 +92,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _pickAndUploadAvatar(String uid, ImageSource source) async {
-    final picker = ImagePicker();
     try {
-      final picked = await picker.pickImage(source: source, imageQuality: 70);
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 70,
+      );
       if (picked == null) return;
-      setState(() => _isUploading = true);
+      if (!mounted) return;
+      setState(() => _isUploadingImage = true);
       try {
         final file = File(picked.path);
         final refStorage = FirebaseStorage.instance.ref().child(
@@ -90,26 +113,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         try {
           await refStorage.putFile(file);
         } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Fehler beim Hochladen (putFile): $e')),
-            );
-          }
-          setState(() => _isUploading = false);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fehler beim Hochladen (putFile): $e')),
+          );
+          setState(() => _isUploadingImage = false);
           return;
         }
         String url;
         try {
           url = await refStorage.getDownloadURL();
         } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Fehler beim Abrufen der Download-URL: $e'),
-              ),
-            );
-          }
-          setState(() => _isUploading = false);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fehler beim Abrufen der Download-URL: $e')),
+          );
+          setState(() => _isUploadingImage = false);
           return;
         }
         try {
@@ -117,37 +136,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             'photoUrl': url,
           });
         } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Fehler beim Speichern des Profilbild-Links: $e'),
-              ),
-            );
-          }
-          setState(() => _isUploading = false);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Fehler beim Speichern des Profilbild-Links: $e'),
+            ),
+          );
+          setState(() => _isUploadingImage = false);
           return;
         }
-        if (mounted) {
-          setState(() {}); // Soft-Refresh
-        }
+        if (!mounted) return;
+        setState(() {}); // Soft-Refresh
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Fehler beim Hochladen: $e')));
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fehler beim Hochladen: $e')));
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler beim Auswählen des Bildes: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Auswählen des Bildes: $e')),
+      );
     }
-    if (mounted) setState(() => _isUploading = false);
+    if (!mounted) return;
+    setState(() => _isUploadingImage = false);
   }
 
   Future<void> _updateName(String uid, String newName) async {
+    if (newName.isEmpty) return;
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
       'displayName': newName,
     });
@@ -155,299 +172,318 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() {}); // Soft-Refresh
   }
 
-  Future<void> _deleteAccount(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Account löschen'),
-            content: const Text(
-              'Bist du sicher? Dieser Vorgang kann nicht rückgängig gemacht werden!',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Abbrechen'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Löschen'),
-              ),
-            ],
-          ),
-    );
-    if (confirmed == true) {
-      try {
-        await ref.read(authViewModelProvider.notifier).deleteAccountAndData();
-        if (mounted) _showAccountDeletedSnackbar();
-      } catch (e) {
-        if (mounted) _showDeleteErrorSnackbar(e);
-      }
+  Future<void> _onLogout() async {
+    try {
+      await ref.read(authViewModelProvider.notifier).signOut();
+      if (!mounted) return;
+      context.go('/login');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fehler beim Abmelden'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  void _changeLocale(String? locale) {
-    setState(() => _selectedLocale = locale);
-    if (locale != null) {
-      ref.read(localeProvider.notifier).state = Locale(locale);
+  Future<void> _onDeleteAccount() async {
+    try {
+      await ref.read(authViewModelProvider.notifier).deleteAccountAndData();
+      if (!mounted) return;
+      context.go('/login');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fehler beim Löschen des Kontos'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-  }
-
-  void _showAccountDeletedSnackbar() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Account gelöscht.')));
-  }
-
-  void _showDeleteErrorSnackbar(Object e) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Fehler beim Löschen: $e')));
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth = ref.watch(authViewModelProvider);
-    final viewModel = ref.read(authViewModelProvider.notifier);
-    final user = auth.profile;
-    if (user == null) {
+    final user = ref.watch(authViewModelProvider);
+    if (user.status == AuthStatus.loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    _nameController.text = user.displayName ?? '';
-    return StreamBuilder(
-      stream: viewModel.userProfileStream(user.uid),
-      builder: (context, snapshot) {
-        final profile = snapshot.data ?? user;
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Profil'),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                context.go('/');
-              },
+
+    if (user.status == AuthStatus.signedOut) {
+      return const Scaffold(body: Center(child: Text('Bitte melde dich an')));
+    }
+
+    final profileAsync = ref.watch(userProfileProvider);
+
+    return profileAsync.when(
+      loading:
+          () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error:
+          (error, stack) =>
+              Scaffold(body: Center(child: Text('Fehler: $error'))),
+      data:
+          (profile) => Scaffold(
+            appBar: AppBar(
+              title: const Text('Profil'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.go('/'),
+              ),
             ),
-          ),
-          body: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      CircleAvatar(
-                        radius: 48,
-                        backgroundImage:
-                            (profile.photoUrl != null &&
-                                    profile.photoUrl!.isNotEmpty)
-                                ? NetworkImage(profile.photoUrl!)
-                                : const NetworkImage(
-                                  'https://ui-avatars.com/api/?name=User',
-                                ),
-                        child: null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: IconButton(
-                          icon:
-                              _isUploading
-                                  ? const CircularProgressIndicator()
-                                  : const Icon(Icons.edit),
-                          onPressed:
-                              _isUploading
-                                  ? null
-                                  : () async {
-                                    await _showImageSourceDialog(profile.uid);
-                                    if (!mounted) return;
-                                  },
-                          tooltip: 'Avatar ändern',
+                  const SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: () => _showImageSourceDialog(profile.uid),
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundImage:
+                              profile.photoUrl != null
+                                  ? NetworkImage(profile.photoUrl!)
+                                  : null,
+                          child:
+                              profile.photoUrl == null
+                                  ? const Icon(Icons.person, size: 50)
+                                  : null,
                         ),
-                      ),
-                    ],
+                        if (_isUploadingImage)
+                          const Positioned.fill(
+                            child: CircularProgressIndicator(),
+                          ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  _isEditingName
-                      ? Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _nameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Name',
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.check),
-                            onPressed: () async {
-                              await _updateName(
-                                profile.uid,
-                                _nameController.text.trim(),
-                              );
-                              if (!mounted) return;
-                              setState(() => _isEditingName = false);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed:
-                                () => setState(() => _isEditingName = false),
-                          ),
-                        ],
-                      )
-                      : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            (profile.displayName ?? 'Kein Name') +
-                                (profile.tag.isNotEmpty
-                                    ? '#${profile.tag}'
-                                    : ''),
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.copy),
-                            tooltip: 'Name#Tag kopieren',
-                            onPressed: () {
-                              final text =
-                                  (profile.displayName ?? 'Kein Name') +
-                                  (profile.tag.isNotEmpty
-                                      ? '#${profile.tag}'
-                                      : '');
-                              Clipboard.setData(ClipboardData(text: text));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Name#Tag kopiert!'),
-                                ),
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed:
-                                () => setState(() => _isEditingName = true),
-                          ),
-                        ],
-                      ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   Text(
-                    profile.email ?? '',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    profile.displayName ?? 'Kein Name',
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
-                  const SizedBox(height: 32),
+                  Text(
+                    '#${profile.tag}',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ListTile(
+                    leading: const Icon(Icons.edit),
+                    title: const Text('Namen ändern'),
+                    onTap: () => _showNameChangeDialog(context, profile),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.lock),
+                    title: const Text('Passwort ändern'),
+                    onTap: () => _showPasswordChangeDialog(context),
+                  ),
+                  const SizedBox(height: 20),
                   ElevatedButton.icon(
+                    onPressed: _onLogout,
                     icon: const Icon(Icons.logout),
-                    label: const Text('Logout'),
-                    onPressed: () => viewModel.signOut(),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.delete),
-                    label: const Text('Account löschen'),
+                    label: const Text('Abmelden'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
                     ),
-                    onPressed: () => _deleteAccount(context),
                   ),
-                  const SizedBox(height: 16),
-                  if ((profile.provider ?? '').contains('password'))
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.lock),
-                      label: const Text('Passwort ändern'),
-                      onPressed: () async {
-                        final controller = TextEditingController();
-                        final result = await showDialog<String>(
-                          context: context,
-                          builder:
-                              (context) => AlertDialog(
-                                title: const Text('Passwort ändern'),
-                                content: TextField(
-                                  controller: controller,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Neues Passwort',
-                                  ),
-                                  obscureText: true,
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Abbrechen'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed:
-                                        () => Navigator.pop(
-                                          context,
-                                          controller.text.trim(),
-                                        ),
-                                    child: const Text('Ändern'),
-                                  ),
-                                ],
-                              ),
-                        );
-                        if (!mounted) return;
-                        if (result != null && result.length >= 6) {
-                          if (!context.mounted) return;
-                          final messenger = ScaffoldMessenger.of(context);
-                          await ref
-                              .read(authViewModelProvider.notifier)
-                              .changePassword(result);
-                          final authState = ref.read(authViewModelProvider);
-                          if (authState.error == 'pwchange_success') {
-                            messenger.clearSnackBars();
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Passwort geändert.'),
-                                backgroundColor: Colors.green,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            ref
-                                .read(authViewModelProvider.notifier)
-                                .clearError();
-                          } else if (authState.error == 'pwchange_failed') {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Fehler beim Ändern des Passworts.',
-                                ),
-                              ),
-                            );
-                            ref
-                                .read(authViewModelProvider.notifier)
-                                .clearError();
-                          }
-                        }
-                      },
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.delete, color: Colors.red),
+                    title: const Text(
+                      'Konto löschen',
+                      style: TextStyle(color: Colors.red),
                     ),
-                  const SizedBox(height: 16),
-                  const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.language),
-                      const SizedBox(width: 8),
-                      DropdownButton<String>(
-                        value: _selectedLocale,
-                        items: const [
-                          DropdownMenuItem(value: 'de', child: Text('Deutsch')),
-                          DropdownMenuItem(value: 'en', child: Text('English')),
-                        ],
-                        onChanged: _changeLocale,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Sprache'),
-                    ],
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder:
+                            (context) => AlertDialog(
+                              title: const Text('Konto löschen'),
+                              content: const Text(
+                                'Bist du sicher, dass du dein Konto löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Abbrechen'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    _onDeleteAccount();
+                                  },
+                                  child: const Text(
+                                    'Löschen',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
+    );
+  }
+
+  Future<void> _showNameChangeDialog(
+    BuildContext context,
+    UserProfile profile,
+  ) async {
+    final controller = TextEditingController(text: profile.displayName);
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Namen ändern'),
+            content: Form(
+              key: formKey,
+              child: TextFormField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Neuer Name',
+                  hintText: 'Gib deinen neuen Namen ein',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Bitte gib einen Namen ein';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Abbrechen'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (formKey.currentState?.validate() ?? false) {
+                    await _updateName(profile.uid, controller.text);
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Speichern'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Future<void> _showPasswordChangeDialog(BuildContext context) async {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Passwort ändern'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: currentPasswordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Aktuelles Passwort',
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Bitte gib dein aktuelles Passwort ein';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: newPasswordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Neues Passwort',
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Bitte gib ein neues Passwort ein';
+                      }
+                      if (value.length < 6) {
+                        return 'Das Passwort muss mindestens 6 Zeichen lang sein';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: confirmPasswordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Neues Passwort bestätigen',
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value != newPasswordController.text) {
+                        return 'Die Passwörter stimmen nicht überein';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Abbrechen'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (formKey.currentState?.validate() ?? false) {
+                    try {
+                      await ref
+                          .read(authViewModelProvider.notifier)
+                          .changePassword(
+                            currentPasswordController.text,
+                            newPasswordController.text,
+                          );
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Passwort erfolgreich geändert'),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Fehler beim Ändern des Passworts: $e'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Speichern'),
+              ),
+            ],
+          ),
     );
   }
 }

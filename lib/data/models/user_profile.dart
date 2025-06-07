@@ -25,6 +25,29 @@ class UserProfile {
     this.lastActive,
   });
 
+  factory UserProfile.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    DateTime parseDate(dynamic value) {
+      if (value is Timestamp) return value.toDate();
+      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+      return DateTime.now();
+    }
+
+    return UserProfile(
+      uid: doc.id,
+      email: data['email'] as String?,
+      displayName: data['displayName'] as String?,
+      photoUrl: data['photoUrl'] as String?,
+      createdAt: parseDate(data['createdAt']),
+      provider: data['provider'] as String?,
+      tag: data['tag'] as String? ?? '',
+      status: data['status'] as String?,
+      currentLobbyId: data['currentLobbyId'] as String?,
+      lastActive:
+          data['lastActive'] != null ? parseDate(data['lastActive']) : null,
+    );
+  }
+
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       uid: json['uid'] as String,

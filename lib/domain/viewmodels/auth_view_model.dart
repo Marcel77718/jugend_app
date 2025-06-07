@@ -230,12 +230,27 @@ class AuthViewModel extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> changePassword(String newPassword) async {
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     try {
-      await _authService.changePassword(newPassword);
+      final user = _authService.currentUser;
+      if (user == null) throw Exception('Kein Benutzer angemeldet');
+
+      // Reauthenticate user
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Change password
+      await user.updatePassword(newPassword);
       state = state.copyWith(error: 'pwchange_success');
     } catch (e) {
       state = state.copyWith(error: 'pwchange_failed');
+      throw Exception('Fehler beim Ändern des Passworts: $e');
     }
   }
 
@@ -265,6 +280,74 @@ class AuthViewModel extends StateNotifier<AuthState> {
       'status': status,
       'lastActive': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> updateProfile({String? displayName, String? photoUrl}) async {
+    try {
+      final user = _authService.currentUser;
+      if (user == null) throw Exception('Nicht eingeloggt');
+
+      if (displayName != null) {
+        await user.updateDisplayName(displayName);
+        await _firestore.collection('users').doc(user.uid).update({
+          'displayName': displayName,
+        });
+      }
+
+      if (photoUrl != null) {
+        await _firestore.collection('users').doc(user.uid).update({
+          'photoUrl': photoUrl,
+        });
+      }
+
+      // Aktualisiere den State
+      if (state.profile != null) {
+        state = state.copyWith(
+          profile: state.profile!.copyWith(
+            displayName: displayName ?? state.profile!.displayName,
+            photoUrl: photoUrl ?? state.profile!.photoUrl,
+          ),
+        );
+      }
+    } catch (e) {
+      LoggingService.instance.log(
+        'Fehler beim Aktualisieren des Profils',
+        level: LogLevel.error,
+        error: e,
+      );
+      state = state.copyWith(error: 'Fehler beim Aktualisieren des Profils');
+      rethrow;
+    }
+  }
+
+  Future<void> updatePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    try {
+      final user = _authService.currentUser;
+      if (user == null) throw Exception('Nicht eingeloggt');
+      if (user.email == null) throw Exception('Keine E-Mail-Adresse vorhanden');
+
+      // Reauthenticate user
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Update password
+      await user.updatePassword(newPassword);
+      state = state.copyWith(error: 'pwchange_success');
+    } catch (e) {
+      LoggingService.instance.log(
+        'Fehler beim Ändern des Passworts',
+        level: LogLevel.error,
+        error: e,
+      );
+      state = state.copyWith(error: 'pwchange_failed');
+      rethrow;
+    }
   }
 }
 

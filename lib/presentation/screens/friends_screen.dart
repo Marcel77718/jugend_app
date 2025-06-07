@@ -6,8 +6,8 @@ import 'package:jugend_app/data/models/friend.dart';
 import 'package:jugend_app/data/models/friend_request.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'dart:async';
+import 'package:jugend_app/services/image_service.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -20,14 +20,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _searchController = TextEditingController();
-  String? _searchError;
-  bool _isSearching = false;
-  String? _searchResult;
-  String? _searchResultTag;
-  String? _searchResultName;
-  bool _requestSent = false;
   Timer? _uiUpdateTimer;
-  bool _joinCooldown = false;
 
   @override
   void initState() {
@@ -45,58 +38,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     _searchController.dispose();
     _uiUpdateTimer?.cancel();
     super.dispose();
-  }
-
-  Future<void> _searchAndSendRequest(FriendViewModel viewModel) async {
-    setState(() {
-      _isSearching = true;
-      _searchError = null;
-      _searchResult = null;
-      _requestSent = false;
-    });
-    final input = _searchController.text.trim();
-    final parts = input.split('#');
-    if (parts.length != 2 || parts[0].isEmpty || parts[1].isEmpty) {
-      setState(() {
-        _searchError = 'Bitte Name#Tag eingeben (z.B. Kevin#1234)';
-        _isSearching = false;
-      });
-      return;
-    }
-    final name = parts[0];
-    final tag = parts[1];
-    final user = await viewModel.searchUser(name, tag);
-    if (user == null) {
-      setState(() {
-        _searchError = 'Nutzer nicht gefunden';
-        _isSearching = false;
-      });
-      return;
-    }
-    setState(() {
-      _searchResult = '$name#$tag';
-      _searchResultName = name;
-      _searchResultTag = tag;
-      _isSearching = false;
-    });
-  }
-
-  Future<void> _sendRequest(FriendViewModel viewModel) async {
-    if (_searchResultName == null || _searchResultTag == null) return;
-    final error = await viewModel.sendFriendRequest(
-      _searchResultName!,
-      _searchResultTag!,
-    );
-    if (error != null) {
-      setState(() {
-        _searchError = error;
-        _requestSent = false;
-      });
-    } else {
-      setState(() {
-        _requestSent = true;
-      });
-    }
   }
 
   Color _statusColor(String? status, Map<String, dynamic>? userData) {
@@ -127,17 +68,31 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     return 'Offline';
   }
 
-  void _startJoinCooldown() {
-    setState(() {
-      _joinCooldown = true;
-    });
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted) {
-        setState(() {
-          _joinCooldown = false;
-        });
-      }
-    });
+  void _onDeleteTap(BuildContext context, Friend friend) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Freund entfernen?'),
+            content: Text(
+              'Möchtest du ${friend.friendUid} wirklich entfernen?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Abbrechen'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Entfernen'),
+              ),
+            ],
+          ),
+    );
+    if (confirm == true) {
+      final viewModel = ref.watch(friendViewModelProvider);
+      viewModel.removeFriend(friend);
+    }
   }
 
   @override
@@ -159,7 +114,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           controller: _tabController,
           tabs: [
             const Tab(text: 'Freunde'),
-            // Tab für Anfragen mit Badge
             Tab(
               child: StreamBuilder<List<FriendRequest>>(
                 stream: viewModel.requestsStream,
@@ -171,8 +125,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                       const Text('Anfragen'),
                       if (requestCount > 0)
                         Positioned(
-                          right: -15, // Passe die Position an
-                          top: -5, // Passe die Position an
+                          right: -15,
+                          top: -5,
                           child: Container(
                             padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
@@ -208,83 +162,31 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // --- Freunde-Liste ---
           StreamBuilder<List<Friend>>(
             stream: viewModel.friendsStream,
             builder: (context, snapshot) {
-              final friends = snapshot.data ?? [];
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: (friends.isEmpty ? 1 : friends.length + 1),
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, i) {
-                  if (i == 0) {
-                    // Suchfeld immer anzeigen
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Freund hinzufügen'),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Name#Tag',
-                                      errorText: _searchError,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed:
-                                      _isSearching
-                                          ? null
-                                          : () =>
-                                              _searchAndSendRequest(viewModel),
-                                  child:
-                                      _isSearching
-                                          ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                          : const Icon(Icons.search),
-                                ),
-                              ],
-                            ),
-                            if (_searchResult != null && !_requestSent)
-                              Row(
-                                children: [
-                                  Text('Gefunden: $_searchResult'),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton(
-                                    onPressed: () => _sendRequest(viewModel),
-                                    child: const Text('Anfrage senden'),
-                                  ),
-                                ],
-                              ),
-                            if (_requestSent)
-                              const Text(
-                                'Anfrage gesendet!',
-                                style: TextStyle(color: Colors.green),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  if (friends.isEmpty) {
-                    return const Center(child: Text('Noch keine Freunde.'));
-                  }
-                  final friend = friends[i - 1];
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Fehler beim Laden: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final friends = snapshot.data!;
+              if (friends.isEmpty) {
+                return const Center(child: Text('Keine Freunde gefunden.'));
+              }
+
+              return ListView.builder(
+                itemCount: friends.length,
+                itemBuilder: (context, index) {
+                  final friend = friends[index];
                   return StreamBuilder<DocumentSnapshot>(
                     stream:
                         FirebaseFirestore.instance
@@ -324,15 +226,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                                             child: ClipRRect(
                                               borderRadius:
                                                   BorderRadius.circular(16),
-                                              child: Image.network(
-                                                imageUrl,
-                                                fit: BoxFit.contain,
-                                                errorBuilder:
-                                                    (c, o, s) => const Icon(
+                                              child: ImageService.instance
+                                                  .getOptimizedNetworkImage(
+                                                    imageUrl: imageUrl,
+                                                    fit: BoxFit.contain,
+                                                    errorWidget: const Icon(
                                                       Icons.account_circle,
                                                       size: 120,
                                                     ),
-                                              ),
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -369,87 +271,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (status == 'lobby' &&
-                                lobbyId != null &&
-                                lobbyId.isNotEmpty)
-                              IconButton(
-                                icon:
-                                    _joinCooldown
-                                        ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                        : const Icon(Icons.login),
-                                tooltip:
-                                    _joinCooldown
-                                        ? 'Bitte warte 10 Sekunden...'
-                                        : 'Lobby beitreten',
-                                onPressed:
-                                    _joinCooldown
-                                        ? null
-                                        : () {
-                                          _startJoinCooldown();
-                                          context.go(
-                                            '/lobby',
-                                            extra: ReconnectData(
-                                              lobbyId: lobbyId,
-                                              playerName:
-                                                  user.displayName ??
-                                                  'Unbekannt',
-                                              isHost: false,
-                                              gameType:
-                                                  userData['gameType'] ??
-                                                  'Impostor',
-                                            ),
-                                          );
-                                        },
-                              ),
-                            if (status != 'game')
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                tooltip: 'Freund entfernen',
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder:
-                                        (context) => AlertDialog(
-                                          title: const Text(
-                                            'Freund entfernen?',
-                                          ),
-                                          content: Text(
-                                            'Möchtest du $displayName wirklich entfernen?',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(
-                                                    context,
-                                                    false,
-                                                  ),
-                                              child: const Text('Abbrechen'),
-                                            ),
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(
-                                                    context,
-                                                    true,
-                                                  ),
-                                              child: const Text('Entfernen'),
-                                            ),
-                                          ],
-                                        ),
-                                  );
-                                  if (confirm == true) {
-                                    await viewModel.removeFriend(friend);
-                                  }
-                                },
-                              ),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () => _onDeleteTap(context, friend),
+                            ),
                           ],
                         ),
                       );
@@ -459,7 +284,6 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
               );
             },
           ),
-          // --- Anfragen ---
           StreamBuilder<List<FriendRequest>>(
             stream: viewModel.requestsStream,
             builder: (context, snapshot) {

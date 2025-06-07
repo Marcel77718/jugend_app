@@ -134,7 +134,7 @@ final GoRouter appRouter = GoRouter(
                         gameType: data.gameType,
                         context: context,
                       ),
-            child: const GameScreen(),
+            child: GameScreen(gameId: data.lobbyId),
           ),
         );
       },
@@ -200,7 +200,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.profile,
       pageBuilder:
-          (context, state) => SlidePageTransition(
+          (context, state) => FadePageTransition(
             child: AuthGuard(child: const ProfileScreen()),
           ),
     ),
