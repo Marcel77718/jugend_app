@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/data/repositories/games_repository.dart';
+import 'package:jugend_app/data/models/game_info.dart';
 
 final gamesCatalogProvider = FutureProvider<List<GameInfo>>((ref) async {
   final repo = ref.watch(gamesRepositoryProvider);

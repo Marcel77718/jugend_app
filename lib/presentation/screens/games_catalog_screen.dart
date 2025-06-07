@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:jugend_app/domain/viewmodels/games_catalog_view_model.dart';
-import 'package:jugend_app/data/repositories/games_repository.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jugend_app/domain/viewmodels/games_catalog_view_model.dart';
+import 'package:jugend_app/data/models/game_info.dart';
 
 class GamesCatalogScreen extends ConsumerWidget {
   const GamesCatalogScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final gamesAsync = ref.watch(gamesCatalogProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final gamesAsync = ref.watch(gamesCatalogProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Spiele-Katalog'),
+        title: const Text('Spiele'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: 'Zurück zum Hub',
           onPressed: () => context.go('/'),
         ),
       ),
@@ -68,6 +68,7 @@ class GamesCatalogScreen extends ConsumerWidget {
 class _GameCard extends StatelessWidget {
   final GameInfo game;
   final ColorScheme colorScheme;
+
   const _GameCard({required this.game, required this.colorScheme});
 
   @override
@@ -108,6 +109,8 @@ class _GameCard extends StatelessWidget {
                             (c, o, s) =>
                                 const Icon(Icons.videogame_asset, size: 48),
                         semanticLabel: '${game.name} Icon',
+                        cacheWidth: 200,
+                        cacheHeight: 200,
                       ),
                     ),
                     const SizedBox(height: 12),

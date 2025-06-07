@@ -3,8 +3,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jugend_app/services/image_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PlayerTile extends StatelessWidget {
+final userDataProvider = StreamProvider.family<Map<String, dynamic>?, String>(
+  (ref, uid) => FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .snapshots()
+      .map((snap) => snap.data()),
+);
+
+class PlayerTile extends ConsumerWidget {
   final Map<String, dynamic> player;
   final bool isHost;
   final bool isOwnPlayer;
@@ -29,67 +38,12 @@ class PlayerTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isReady = player['isReady'] == true;
-    final isPlayerHost = player['id'] == hostId;
-
-    final point = Icon(
-      isPlayerHost
-          ? (isReady ? Icons.circle : Icons.circle_outlined)
-          : (isReady ? Icons.circle : Icons.circle_outlined),
-      color: isPlayerHost ? Colors.blue : (isReady ? Colors.green : Colors.red),
-      size: 12,
-    );
-
-    final crown =
-        isPlayerHost
-            ? const Padding(
-              padding: EdgeInsets.only(left: 8.0),
-              child: Icon(
-                Icons.workspace_premium,
-                size: 16,
-                color: Colors.amber,
-              ),
-            )
-            : const SizedBox.shrink();
-
-    final kickButton =
-        onKick != null
-            ? IconButton(
-              icon: const Icon(Icons.close, size: 16),
-              onPressed: onKick,
-            )
-            : const SizedBox.shrink();
-
-    final nameEdit =
-        onNameChange != null
-            ? IconButton(
-              icon: const Icon(Icons.edit, size: 16),
-              onPressed: onNameChange,
-            )
-            : const SizedBox.shrink();
-
-    final hostTransferButton =
-        onHostTransfer != null
-            ? IconButton(
-              icon: const Icon(
-                Icons.emoji_events,
-                size: 16,
-                color: Colors.amber,
-              ),
-              tooltip: 'Host übertragen',
-              onPressed: onHostTransfer,
-            )
-            : const SizedBox.shrink();
-
-    final addFriendButton =
-        showAddFriend && onAddFriend != null
-            ? IconButton(
-              icon: const Icon(Icons.person_add, color: Colors.teal, size: 18),
-              tooltip: 'Als Freund hinzufügen',
-              onPressed: onAddFriend,
-            )
-            : const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userUid = player['userUid'] as String?;
+    final userData =
+        userUid != null
+            ? ref.watch(userDataProvider(userUid))
+            : const AsyncValue.data(null);
 
     return ListTile(
       leading: Row(
@@ -139,54 +93,72 @@ class PlayerTile extends StatelessWidget {
               child: null,
             ),
           ),
-          const SizedBox(width: 6),
-          point,
+          if (player['isReady'] == true)
+            Container(
+              width: 12,
+              height: 12,
+              margin: const EdgeInsets.only(left: 4),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+            ),
         ],
       ),
       title: Row(
         children: [
           Expanded(
-            child:
-                player['userUid'] != null &&
-                        (player['userUid'] as String).isNotEmpty
-                    ? StreamBuilder(
-                      stream:
-                          FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(player['userUid'])
-                              .snapshots(),
-                      builder: (context, snap) {
-                        if (!snap.hasData || snap.data?.data() == null) {
-                          return const Text('...');
-                        }
-                        final userData =
-                            snap.data!.data() as Map<String, dynamic>;
-                        final displayName = userData['displayName'] ?? '';
-                        final tag = userData['tag'] ?? '';
-                        return Text(
-                          '$displayName${tag.isNotEmpty ? '#$tag' : ''}',
-                          style: TextStyle(
-                            fontWeight:
-                                isOwnPlayer
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                          ),
-                        );
-                      },
-                    )
-                    : Text(
-                      player['name'] ?? 'Unbenannt',
-                      style: TextStyle(
-                        fontWeight:
-                            isOwnPlayer ? FontWeight.bold : FontWeight.normal,
-                      ),
+            child: userData.when(
+              data: (data) {
+                if (data == null) return const Text('...');
+                final displayName = data['displayName'] ?? '';
+                final tag = data['tag'] ?? '';
+                return Text(
+                  '$displayName${tag.isNotEmpty ? '#$tag' : ''}',
+                  style: TextStyle(
+                    fontWeight:
+                        isOwnPlayer ? FontWeight.bold : FontWeight.normal,
+                  ),
+                );
+              },
+              loading: () => const Text('...'),
+              error:
+                  (_, __) => Text(
+                    player['name'] ?? 'Unbenannt',
+                    style: TextStyle(
+                      fontWeight:
+                          isOwnPlayer ? FontWeight.bold : FontWeight.normal,
                     ),
+                  ),
+            ),
           ),
-          crown,
-          nameEdit,
-          hostTransferButton,
-          kickButton,
-          addFriendButton,
+          if (player['id'] == hostId)
+            const Padding(
+              padding: EdgeInsets.only(left: 8),
+              child: Icon(Icons.star, color: Colors.amber, size: 20),
+            ),
+          if (isHost && player['id'] != hostId)
+            IconButton(
+              icon: const Icon(Icons.star_outline),
+              onPressed: () {
+                // Host-Transfer Logik
+              },
+            ),
+          if (isHost && player['id'] != hostId)
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline),
+              onPressed: () {
+                // Kick-Logik
+              },
+            ),
+          if (!isOwnPlayer && userUid != null)
+            IconButton(
+              icon: const Icon(Icons.person_add_outlined),
+              onPressed: () {
+                // Freund hinzufügen Logik
+              },
+            ),
         ],
       ),
     );
