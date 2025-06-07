@@ -32,16 +32,17 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       userName: _userName,
       message: _messageController.text.trim(),
       rating: _rating,
-      appVersion: null, // Optional: App-Version einfügen
-      platform: null, // Optional: Plattform einfügen
+      appVersion: null,
+      platform: null,
     );
+
     if (!mounted) return;
+
     if (viewModel.submitSuccess) {
       _messageController.clear();
       setState(() => _rating = 5);
       FocusScope.of(context).unfocus();
       viewModel.resetSubmitState();
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.feedbackSuccess)),
       );

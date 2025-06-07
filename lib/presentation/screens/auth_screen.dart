@@ -53,10 +53,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (!_isLogin) {
       if (_passwordController.text != _passwordRepeatController.text) {
-        _updateUIState(passwordRepeatError: 'Passwörter stimmen nicht überein');
+        setState(
+          () => _passwordRepeatError = 'Passwörter stimmen nicht überein',
+        );
         return;
       } else {
-        _updateUIState(passwordRepeatError: null);
+        setState(() => _passwordRepeatError = null);
       }
     }
     final locale = Localizations.localeOf(context).languageCode;
@@ -74,7 +76,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       );
       await viewModel.sendEmailVerification();
       if (!mounted) return;
-      _updateUIState(showVerificationNotice: true);
+      setState(() => _showVerificationNotice = true);
       SnackbarHelper.success(
         context,
         'Verifizierungs-E-Mail wurde gesendet. Bitte prüfe deine E-Mails.',

@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' show Platform;
+import 'package:jugend_app/core/performance_monitor.dart';
 
 final localeProvider = StateProvider<Locale?>((ref) => const Locale('de'));
 
@@ -64,6 +65,9 @@ void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      // Starte Performance-Monitoring
+      PerformanceMonitor.instance.startMonitoring();
 
       try {
         await initializeFirebase();

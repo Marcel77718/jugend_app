@@ -50,7 +50,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _playerName = playerName;
     _isHost = isHost;
     _gameType = gameType;
-    _deviceId = await DeviceIdHelper.getOrCreateDeviceId();
+    _deviceId = await DeviceIdHelper.getSafeDeviceId();
     _lobbyRef = _firestore.collection('lobbies/$_lobbyId/players');
 
     // Starte regelmäßige Aktivitätsupdates

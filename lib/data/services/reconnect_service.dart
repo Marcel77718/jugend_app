@@ -42,7 +42,7 @@ class ReconnectService {
 
   /// Speichert Daten unter der automatisch ermittelten Device-ID
   Future<void> registerReconnectData(ReconnectData data) async {
-    final deviceId = await DeviceIdHelper.getOrCreateDeviceId();
+    final deviceId = await DeviceIdHelper.getSafeDeviceId();
     await saveReconnectData(deviceId, data);
   }
 }

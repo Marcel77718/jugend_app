@@ -107,6 +107,22 @@ class LoggingService {
       developer.log('Failed to clear logs: $e', level: 900);
     }
   }
+
+  void logWarning(String message) {
+    log(message, level: LogLevel.warning);
+  }
+
+  void logError(String message) {
+    log(message, level: LogLevel.error);
+  }
+
+  void logDebug(String message) {
+    log(message, level: LogLevel.debug);
+  }
+
+  void logInfo(String message) {
+    log(message, level: LogLevel.info);
+  }
 }
 
 enum LogLevel {
