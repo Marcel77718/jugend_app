@@ -2,47 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class FadePageTransition extends CustomTransitionPage<void> {
-  FadePageTransition({required Widget child, LocalKey? key})
+  FadePageTransition({required super.child, super.key})
     : super(
-        key: key,
-        child: child,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
+        transitionsBuilder:
+            (context, animation, secondaryAnimation, child) =>
+                FadeTransition(opacity: animation, child: child),
       );
 }
 
 class SlidePageTransition extends CustomTransitionPage<void> {
-  SlidePageTransition({required Widget child, LocalKey? key})
+  SlidePageTransition({required super.child, super.key})
     : super(
-        key: key,
-        child: child,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(-1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+        transitionsBuilder:
+            (context, animation, secondaryAnimation, child) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(-1.0, 0.0),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+              ),
+              child: child,
             ),
-            child: child,
-          );
-        },
       );
 }
 
 class ScalePageTransition extends CustomTransitionPage<void> {
-  ScalePageTransition({required Widget child, LocalKey? key})
+  ScalePageTransition({required super.child, super.key})
     : super(
-        key: key,
-        child: child,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return ScaleTransition(
-            scale: Tween<double>(begin: 0.8, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+        transitionsBuilder:
+            (context, animation, secondaryAnimation, child) => ScaleTransition(
+              scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+              ),
+              child: FadeTransition(opacity: animation, child: child),
             ),
-            child: FadeTransition(opacity: animation, child: child),
-          );
-        },
       );
 }

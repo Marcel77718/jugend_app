@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jugend_app/data/models/user_profile.dart';
+import 'package:jugend_app/services/image_service.dart';
 
 final userProfileProvider = StreamProvider<UserProfile>((ref) {
   final authState = ref.watch(authViewModelProvider);
@@ -95,6 +96,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final picked = await _imagePicker.pickImage(
         source: source,
         imageQuality: 70,
+        maxWidth: 800,
+        maxHeight: 800,
       );
       if (picked == null) return;
       if (!mounted) return;
@@ -104,13 +107,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         final refStorage = FirebaseStorage.instance.ref().child(
           'avatars/$uid.jpg',
         );
+
+        // Lösche altes Bild aus dem Cache
+        try {
+          await ImageService.instance.clearCache();
+        } catch (e) {
+          // Bild existiert nicht – kein Problem
+        }
+
         try {
           await refStorage.delete();
         } catch (e) {
           // Bild existiert nicht – kein Problem
         }
+
         try {
-          await refStorage.putFile(file);
+          await refStorage.putFile(
+            file,
+            SettableMetadata(
+              contentType: 'image/jpeg',
+              customMetadata: {'compressed': 'true'},
+            ),
+          );
         } catch (e) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -119,9 +137,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           setState(() => _isUploadingImage = false);
           return;
         }
+
         String url;
         try {
           url = await refStorage.getDownloadURL();
+          // Vorladen des neuen Bildes
+          await ImageService.instance.preloadImage(url);
         } catch (e) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -130,6 +151,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           setState(() => _isUploadingImage = false);
           return;
         }
+
         try {
           await FirebaseFirestore.instance.collection('users').doc(uid).update({
             'photoUrl': url,
@@ -144,6 +166,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           setState(() => _isUploadingImage = false);
           return;
         }
+
         if (!mounted) return;
         setState(() {}); // Soft-Refresh
       } catch (e) {
@@ -372,7 +395,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 onPressed: () async {
                   if (formKey.currentState?.validate() ?? false) {
                     await _updateName(profile.uid, controller.text);
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     Navigator.pop(context);
                   }
                 },
@@ -453,30 +476,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  if (formKey.currentState?.validate() ?? false) {
-                    try {
-                      await ref
-                          .read(authViewModelProvider.notifier)
-                          .changePassword(
-                            currentPasswordController.text,
-                            newPasswordController.text,
-                          );
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Passwort erfolgreich geändert'),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Fehler beim Ändern des Passworts: $e'),
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                        ),
-                      );
-                    }
+                  // Erst prüfen, ob das Formular okay ist
+                  if (!(formKey.currentState?.validate() ?? false)) return;
+
+                  // ► Kontext-abhängige Objekte VOR dem await zwischenspeichern
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  final errorColor = Theme.of(context).colorScheme.error;
+
+                  try {
+                    // Async-Operation
+                    await ref
+                        .read(authViewModelProvider.notifier)
+                        .changePassword(
+                          currentPasswordController.text,
+                          newPasswordController.text,
+                        );
+
+                    if (!context.mounted) return;
+
+                    navigator.pop(); // kein BuildContext mehr nötig
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Passwort erfolgreich geändert'),
+                      ),
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Fehler beim Ändern des Passworts: $e'),
+                        backgroundColor: errorColor,
+                      ),
+                    );
                   }
                 },
                 child: const Text('Speichern'),

@@ -8,6 +8,7 @@ class ImageService {
   static ImageService get instance => _instance;
 
   final _cacheManager = DefaultCacheManager();
+  final _preloadedUrls = <String>{};
 
   ImageService._internal();
 
@@ -19,6 +20,11 @@ class ImageService {
     Widget? placeholder,
     Widget? errorWidget,
   }) {
+    // Automatisches Vorladen wenn noch nicht geladen
+    if (!_preloadedUrls.contains(imageUrl)) {
+      preloadImage(imageUrl);
+    }
+
     return CachedNetworkImage(
       imageUrl: imageUrl,
       width: width,
@@ -33,12 +39,17 @@ class ImageService {
       cacheManager: _cacheManager,
       memCacheWidth: (width?.toInt() ?? 300) * 2, // 2x für Retina Displays
       memCacheHeight: (height?.toInt() ?? 300) * 2,
+      fadeInDuration: const Duration(milliseconds: 200),
+      fadeOutDuration: const Duration(milliseconds: 200),
     );
   }
 
   Future<void> preloadImage(String imageUrl) async {
+    if (_preloadedUrls.contains(imageUrl)) return;
+
     try {
       await _cacheManager.getSingleFile(imageUrl);
+      _preloadedUrls.add(imageUrl);
     } catch (e) {
       LoggingService.instance.log(
         'Fehler beim Vorladen des Bildes: $e',
@@ -48,9 +59,17 @@ class ImageService {
     }
   }
 
+  Future<void> preloadImages(List<String> imageUrls) async {
+    await Future.wait(
+      imageUrls.map((url) => preloadImage(url)),
+      eagerError: false,
+    );
+  }
+
   Future<void> clearCache() async {
     try {
       await _cacheManager.emptyCache();
+      _preloadedUrls.clear();
     } catch (e) {
       LoggingService.instance.log(
         'Fehler beim Leeren des Bild-Caches: $e',
