@@ -16,18 +16,16 @@ class HomeScreen extends StatelessWidget {
     return riverpod.Consumer(
       builder: (context, ref, _) {
         final auth = ref.watch(authViewModelProvider);
-        final viewModel = ref.read(authViewModelProvider.notifier);
-        if (auth.status == AuthStatus.signedIn && auth.profile != null) {
-          return StreamBuilder(
-            stream: viewModel.userProfileStream(auth.profile!.uid),
-            builder: (context, snapshot) {
-              final profile = snapshot.data ?? auth.profile!;
-              return _buildScaffold(context, l10n, auth, profile, ref);
-            },
-          );
-        } else {
-          return _buildScaffold(context, l10n, auth, null, ref);
-        }
+        ref.read(authViewModelProvider.notifier);
+        final profile = ref.watch(userProfileProvider(auth.profile?.uid));
+
+        return _buildScaffold(
+          context,
+          l10n,
+          auth,
+          profile.value ?? auth.profile,
+          ref,
+        );
       },
     );
   }

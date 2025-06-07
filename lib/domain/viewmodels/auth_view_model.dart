@@ -351,6 +351,21 @@ class AuthViewModel extends StateNotifier<AuthState> {
   }
 }
 
-final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>(
-  (ref) => AuthViewModel(),
-);
+final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((
+  ref,
+) {
+  return AuthViewModel();
+});
+
+final userProfileProvider = StreamProvider.family<UserProfile?, String?>((
+  ref,
+  uid,
+) {
+  if (uid == null) return Stream.value(null);
+
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .snapshots()
+      .map((doc) => doc.exists ? UserProfile.fromJson(doc.data()!) : null);
+});

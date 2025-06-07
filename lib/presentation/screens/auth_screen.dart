@@ -22,6 +22,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _showVerificationNotice = false;
   String? _passwordRepeatError;
 
+  // Neuer State für UI-Updates
+  void _updateUIState({
+    bool? isLogin,
+    bool? gdprAccepted,
+    bool? showVerificationNotice,
+    String? passwordRepeatError,
+  }) {
+    setState(() {
+      if (isLogin != null) _isLogin = isLogin;
+      if (gdprAccepted != null) _gdprAccepted = gdprAccepted;
+      if (showVerificationNotice != null) {
+        _showVerificationNotice = showVerificationNotice;
+      }
+      if (passwordRepeatError != null) {
+        _passwordRepeatError = passwordRepeatError;
+      }
+    });
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -34,14 +53,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (!_isLogin) {
       if (_passwordController.text != _passwordRepeatController.text) {
-        setState(() {
-          _passwordRepeatError = 'Passwörter stimmen nicht überein';
-        });
+        _updateUIState(passwordRepeatError: 'Passwörter stimmen nicht überein');
         return;
       } else {
-        setState(() {
-          _passwordRepeatError = null;
-        });
+        _updateUIState(passwordRepeatError: null);
       }
     }
     final locale = Localizations.localeOf(context).languageCode;
@@ -59,9 +74,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       );
       await viewModel.sendEmailVerification();
       if (!mounted) return;
-      setState(() {
-        _showVerificationNotice = true;
-      });
+      _updateUIState(showVerificationNotice: true);
       SnackbarHelper.success(
         context,
         'Verifizierungs-E-Mail wurde gesendet. Bitte prüfe deine E-Mails.',
@@ -98,9 +111,56 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ],
           ),
     );
-    setState(() {
-      _gdprAccepted = accepted == true;
-    });
+    _updateUIState(gdprAccepted: accepted == true);
+  }
+
+  void _handleAuthState(AuthState authState, AuthViewModel viewModel) {
+    if (authState.error != null) {
+      if (authState.error == 'success' && !_isLogin) {
+        _updateUIState(showVerificationNotice: true);
+        viewModel.clearError();
+        return;
+      }
+
+      // Fehlerbehandlung
+      if (authState.error == 'reset_success') {
+        SnackbarHelper.success(
+          context,
+          'Passwort-Reset-E-Mail wurde gesendet.',
+        );
+      } else if (authState.error == 'reset_failed') {
+        SnackbarHelper.error(context, 'Fehler beim Senden der Reset-E-Mail.');
+      } else if (authState.error == 'verify_success' &&
+          !_showVerificationNotice) {
+        SnackbarHelper.success(
+          context,
+          'Verifizierungs-E-Mail wurde gesendet.',
+        );
+      } else if (authState.error == 'verify_failed' &&
+          !_showVerificationNotice) {
+        SnackbarHelper.error(
+          context,
+          'Fehler beim Senden der Verifizierungs-E-Mail.',
+        );
+      } else if (authState.error!.contains('Es gibt keinen Account') ||
+          authState.error!.contains('Falsches Passwort') ||
+          authState.error!.contains('Diese E-Mail ist bereits registriert.') ||
+          authState.error!.contains('Ungültige E-Mail-Adresse.') ||
+          authState.error!.contains('Das Passwort ist zu schwach.') ||
+          (authState.error != null && authState.error != 'success')) {
+        SnackbarHelper.error(context, authState.error!);
+        viewModel.setSignedOut();
+      }
+      viewModel.clearError();
+    }
+
+    // Weiterleitung ins Hub NUR wenn die E-Mail verifiziert ist
+    final isVerified = AuthService().currentUser?.emailVerified ?? false;
+    if (authState.status == AuthStatus.signedIn && isVerified) {
+      context.go('/');
+    } else if (authState.status == AuthStatus.signedIn && !isVerified) {
+      _updateUIState(showVerificationNotice: true);
+    }
   }
 
   @override
@@ -109,70 +169,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final viewModel = ref.read(authViewModelProvider.notifier);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (authState.error != null) {
-        if (authState.error == 'success' && !_isLogin) {
-          setState(() {
-            _showVerificationNotice = true;
-          });
-          viewModel.clearError();
-          return;
-        }
-        if (authState.error == 'reset_success') {
-          SnackbarHelper.success(
-            context,
-            'Passwort-Reset-E-Mail wurde gesendet.',
-          );
-          viewModel.clearError();
-        } else if (authState.error == 'reset_failed') {
-          SnackbarHelper.error(context, 'Fehler beim Senden der Reset-E-Mail.');
-          viewModel.clearError();
-        } else if (authState.error == 'verify_success') {
-          if (!_showVerificationNotice) {
-            SnackbarHelper.success(
-              context,
-              'Verifizierungs-E-Mail wurde gesendet.',
-            );
-          }
-          viewModel.clearError();
-        } else if (authState.error == 'verify_failed') {
-          if (!_showVerificationNotice) {
-            SnackbarHelper.error(
-              context,
-              'Fehler beim Senden der Verifizierungs-E-Mail.',
-            );
-          }
-          viewModel.clearError();
-        } else if (authState.error!.contains('Es gibt keinen Account')) {
-          SnackbarHelper.error(context, authState.error!);
-          viewModel.setSignedOut();
-        } else if (authState.error!.contains('Falsches Passwort')) {
-          SnackbarHelper.error(context, authState.error!);
-          viewModel.setSignedOut();
-        } else if (authState.error!.contains(
-          'Diese E-Mail ist bereits registriert.',
-        )) {
-          SnackbarHelper.error(context, authState.error!);
-          viewModel.setSignedOut();
-        } else if (authState.error!.contains('Ungültige E-Mail-Adresse.')) {
-          SnackbarHelper.error(context, authState.error!);
-          viewModel.setSignedOut();
-        } else if (authState.error!.contains('Das Passwort ist zu schwach.')) {
-          SnackbarHelper.error(context, authState.error!);
-          viewModel.setSignedOut();
-        } else if (authState.error != null && authState.error != 'success') {
-          SnackbarHelper.error(context, authState.error!);
-          viewModel.setSignedOut();
-        }
-      }
-      // Weiterleitung ins Hub NUR wenn die E-Mail verifiziert ist
-      final isVerified = AuthService().currentUser?.emailVerified ?? false;
-      if (authState.status == AuthStatus.signedIn && isVerified) {
-        context.go('/');
-      } else if (authState.status == AuthStatus.signedIn && !isVerified) {
-        setState(() {
-          _showVerificationNotice = true;
-        });
-      }
+      _handleAuthState(authState, viewModel);
     });
 
     return Scaffold(
