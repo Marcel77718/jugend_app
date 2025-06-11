@@ -6,11 +6,11 @@ import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:jugend_app/data/services/lobby_service.dart';
 import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:jugend_app/core/snackbar_helper.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jugend_app/core/app_routes.dart';
+import 'package:jugend_app/generated/app_localizations.dart';
 
 class LobbyJoinScreen extends StatefulWidget {
   const LobbyJoinScreen({super.key});

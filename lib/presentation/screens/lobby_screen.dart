@@ -7,12 +7,12 @@ import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/presentation/widgets/player_tile.dart';
 import 'package:jugend_app/data/repositories/lobby_repository.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/friend_view_model.dart';
 import 'package:jugend_app/data/models/friend.dart';
 import 'package:jugend_app/core/app_routes.dart';
 import 'package:jugend_app/core/performance_monitor.dart';
+import 'package:jugend_app/generated/app_localizations.dart';
 
 class LobbyScreen extends StatefulWidget {
   final String lobbyId;
