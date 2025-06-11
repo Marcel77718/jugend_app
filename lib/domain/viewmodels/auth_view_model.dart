@@ -32,11 +32,43 @@ class AuthState {
 class AuthViewModel extends StateNotifier<AuthState> {
   final AuthService _authService;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isLogin = true;
+  bool _gdprAccepted = false;
+  bool _showVerificationNotice = false;
+  String? _passwordRepeatError;
 
   AuthViewModel({AuthService? authService})
     : _authService = authService ?? AuthService(),
       super(AuthState(status: AuthStatus.loading)) {
     _authService.authStateChanges.listen(_onAuthChanged);
+  }
+
+  // UI-spezifische Getter
+  bool get isLogin => _isLogin;
+  bool get gdprAccepted => _gdprAccepted;
+  bool get showVerificationNotice => _showVerificationNotice;
+  String? get passwordRepeatError => _passwordRepeatError;
+
+  // UI-spezifische Methoden
+  void toggleLoginMode() {
+    _isLogin = !_isLogin;
+    _showVerificationNotice = false;
+    state = state.copyWith();
+  }
+
+  void setGdprAccepted(bool accepted) {
+    _gdprAccepted = accepted;
+    state = state.copyWith();
+  }
+
+  void setShowVerificationNotice(bool show) {
+    _showVerificationNotice = show;
+    state = state.copyWith();
+  }
+
+  void setPasswordRepeatError(String? error) {
+    _passwordRepeatError = error;
+    state = state.copyWith();
   }
 
   Future<String> _generateUniqueTag(String displayName) async {

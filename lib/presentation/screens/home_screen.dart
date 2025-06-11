@@ -6,6 +6,8 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/data/models/user_profile.dart';
+import 'package:jugend_app/core/performance_monitor.dart';
+import 'package:jugend_app/core/widget_optimizer.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -42,39 +44,40 @@ class HomeScreen extends StatelessWidget {
         title: Text(l10n.appTitle),
         actions: [
           if (auth.status == AuthStatus.signedIn)
-            IconButton(
-              icon:
-                  (profile?.photoUrl != null && profile!.photoUrl!.isNotEmpty)
-                      ? CircleAvatar(
-                        backgroundImage: NetworkImage(profile.photoUrl!),
-                        radius: 16,
-                      )
-                      : const Icon(Icons.account_circle),
-              tooltip: 'Profil',
-              onPressed: () => context.go('/profile'),
+            PerformanceWidget(
+              name: 'ProfileButton',
+              child: IconButton(
+                icon:
+                    profile?.photoUrl != null
+                        ? CircleAvatar(
+                          backgroundImage: NetworkImage(profile!.photoUrl!),
+                          radius: 16,
+                        )
+                        : const Icon(Icons.account_circle),
+                tooltip: 'Profil',
+                onPressed: () => context.go('/profile'),
+              ),
             ),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          int crossAxisCount = 2;
-          if (constraints.maxWidth < 500) {
-            crossAxisCount = 1;
-          } else if (constraints.maxWidth > 900) {
-            crossAxisCount = 3;
-          }
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: GridView.builder(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      body: PerformanceWidget(
+        name: 'HomeContent',
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            int crossAxisCount = 2;
+            if (constraints.maxWidth < 500) {
+              crossAxisCount = 1;
+            } else if (constraints.maxWidth > 900) {
+              crossAxisCount = 3;
+            }
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: WidgetOptimizer.optimizedGridView(
+                name: 'HomeMenu',
                 crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 1.1,
-              ),
-              itemCount: 4,
-              itemBuilder: (context, index) {
-                final tiles = [
+                crossAxisSpacing: 16,
+                children: [
                   _HubTile(
                     label: 'Games',
                     icon: Icons.videogame_asset,
@@ -95,12 +98,11 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.feedback_outlined,
                     onTap: () => context.go('/feedback'),
                   ),
-                ];
-                return tiles[index];
-              },
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -113,21 +115,24 @@ class HomeScreen extends StatelessWidget {
     final result = await showDialog<bool>(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: const Text('Login erforderlich'),
-            content: const Text(
-              'Dieses Feature funktioniert nur, wenn du eingeloggt bist. Jetzt einloggen?',
+          (context) => PerformanceWidget(
+            name: 'LoginRequiredDialog',
+            child: AlertDialog(
+              title: const Text('Login erforderlich'),
+              content: const Text(
+                'Dieses Feature funktioniert nur, wenn du eingeloggt bist. Jetzt einloggen?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Nein'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Ja, einloggen'),
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Nein'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Ja, einloggen'),
-              ),
-            ],
           ),
     );
     if (result == true) {
@@ -150,21 +155,27 @@ class _HubTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.primaryContainer,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(clipBehavior: Clip.none, children: [Icon(icon, size: 48)]),
-              const SizedBox(height: 8),
-              Text(label, style: Theme.of(context).textTheme.titleMedium),
-            ],
+    return PerformanceWidget(
+      name: 'HubTile_$label',
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Theme.of(context).colorScheme.primaryContainer,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [Icon(icon, size: 48)],
+                ),
+                const SizedBox(height: 8),
+                Text(label, style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
           ),
         ),
       ),

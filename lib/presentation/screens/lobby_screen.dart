@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/friend_view_model.dart';
 import 'package:jugend_app/data/models/friend.dart';
 import 'package:jugend_app/core/app_routes.dart';
+import 'package:jugend_app/core/performance_monitor.dart';
 
 class LobbyScreen extends StatefulWidget {
   final String lobbyId;
@@ -45,36 +46,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
           final newName = await showDialog<String>(
             context: context,
             barrierDismissible: false,
-            builder: (context) {
-              final controller = TextEditingController();
-              return AlertDialog(
-                title: const Text('Namenskonflikt'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Ein eingeloggter Spieler hat den gleichen Namen. Bitte wähle einen neuen Namen.',
+            builder:
+                (context) => PerformanceWidget(
+                  name: 'NameConflictDialog',
+                  child: AlertDialog(
+                    title: const Text('Namenskonflikt'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Ein eingeloggter Spieler hat den gleichen Namen. Bitte wähle einen neuen Namen.',
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          decoration: const InputDecoration(
+                            hintText: 'Neuer Name',
+                          ),
+                          onSubmitted:
+                              (value) => Navigator.pop(context, value.trim()),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: controller,
-                      decoration: const InputDecoration(hintText: 'Neuer Name'),
-                    ),
-                  ],
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Abbrechen'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, ''),
+                        child: const Text('Ändern'),
+                      ),
+                    ],
+                  ),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Abbrechen'),
-                  ),
-                  TextButton(
-                    onPressed:
-                        () => Navigator.pop(context, controller.text.trim()),
-                    child: const Text('Ändern'),
-                  ),
-                ],
-              );
-            },
           );
           if (newName != null && newName.isNotEmpty && context.mounted) {
             if (!mounted) return;
@@ -131,147 +135,166 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 await _handleBackPressed(context, viewModel);
               }
             },
-            child: Scaffold(
-              appBar: AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => _handleBackPressed(context, viewModel),
-                ),
-                title: Text(l10n.appTitle),
-                actions: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Center(
-                      child: Text(
-                        '${l10n.labelLobbyId}: ${viewModel.lobbyId}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+            child: PerformanceWidget(
+              name: 'LobbyContent',
+              child: Scaffold(
+                appBar: AppBar(
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => _handleBackPressed(context, viewModel),
+                  ),
+                  title: Text(l10n.appTitle),
+                  actions: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Center(
+                        child: Text(
+                          '${l10n.labelLobbyId}: ${viewModel.lobbyId}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              body: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 500),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            final friendViewModel = ref.watch(
-                              friendViewModelProvider,
-                            );
-                            final friendsStream = friendViewModel.friendsStream;
-                            return StreamBuilder<List<Friend>>(
-                              stream: friendsStream,
-                              builder: (context, snapshot) {
-                                final friendList = snapshot.data ?? [];
-                                return ListView.builder(
-                                  itemCount: sortedPlayers.length,
-                                  itemBuilder: (context, index) {
-                                    final player = sortedPlayers[index];
-                                    final isOwn =
-                                        player['id'] == viewModel.deviceId;
-                                    final isFriend = friendList.any(
-                                      (f) => f.friendUid == player['userUid'],
-                                    );
-                                    return PlayerTile(
-                                      key: ValueKey(player['id']),
-                                      player: player,
-                                      isOwnPlayer: isOwn,
-                                      isHost: viewModel.isHost,
-                                      hostId: viewModel.hostId,
-                                      onKick:
-                                          viewModel.isHost && !isOwn
-                                              ? () => _confirmKick(
-                                                context,
-                                                viewModel,
-                                                player['id'],
-                                                player['name'],
-                                              )
-                                              : null,
-                                      onNameChange:
-                                          isOwn
-                                              ? () => viewModel
-                                                  .confirmNameChangeDialog(
-                                                    context,
-                                                    player['name'],
-                                                  )
-                                              : null,
-                                      onHostTransfer:
-                                          viewModel.isHost && !isOwn
-                                              ? () => viewModel
-                                                  .confirmHostTransferDialog(
-                                                    context,
-                                                    player['id'],
-                                                    player['name'],
-                                                  )
-                                              : null,
-                                      showAddFriend: !isOwn && !isFriend,
-                                      onAddFriend:
-                                          !isOwn && !isFriend
-                                              ? () async {
-                                                final name =
-                                                    player['name'] ?? '';
-                                                final tag = player['tag'] ?? '';
-                                                final error =
-                                                    await friendViewModel
-                                                        .sendFriendRequest(
-                                                          name,
-                                                          tag,
+                  ],
+                ),
+                body: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: PerformanceWidget(
+                            name: 'PlayerList',
+                            child: Consumer(
+                              builder: (context, ref, _) {
+                                final friendViewModel = ref.watch(
+                                  friendViewModelProvider,
+                                );
+                                final friendsStream =
+                                    friendViewModel.friendsStream;
+                                return StreamBuilder<List<Friend>>(
+                                  stream: friendsStream,
+                                  builder: (context, snapshot) {
+                                    final friendList = snapshot.data ?? [];
+                                    return ListView.builder(
+                                      itemCount: sortedPlayers.length,
+                                      itemBuilder: (context, index) {
+                                        final player = sortedPlayers[index];
+                                        final isOwn =
+                                            player['id'] == viewModel.deviceId;
+                                        final isFriend = friendList.any(
+                                          (f) =>
+                                              f.friendUid == player['userUid'],
+                                        );
+                                        return PerformanceWidget(
+                                          name: 'PlayerItem_${player['id']}',
+                                          child: PlayerTile(
+                                            key: ValueKey(player['id']),
+                                            player: player,
+                                            isOwnPlayer: isOwn,
+                                            isHost: viewModel.isHost,
+                                            hostId: viewModel.hostId,
+                                            onKick:
+                                                viewModel.isHost && !isOwn
+                                                    ? () => _confirmKick(
+                                                      context,
+                                                      viewModel,
+                                                      player['id'],
+                                                      player['name'],
+                                                    )
+                                                    : null,
+                                            onNameChange:
+                                                isOwn
+                                                    ? () => viewModel
+                                                        .confirmNameChangeDialog(
+                                                          context,
+                                                          player['name'],
+                                                        )
+                                                    : null,
+                                            onHostTransfer:
+                                                viewModel.isHost && !isOwn
+                                                    ? () => viewModel
+                                                        .confirmHostTransferDialog(
+                                                          context,
+                                                          player['id'],
+                                                          player['name'],
+                                                        )
+                                                    : null,
+                                            showAddFriend: !isOwn && !isFriend,
+                                            onAddFriend:
+                                                !isOwn && !isFriend
+                                                    ? () async {
+                                                      final name =
+                                                          player['name'] ?? '';
+                                                      final tag =
+                                                          player['tag'] ?? '';
+                                                      final error =
+                                                          await friendViewModel
+                                                              .sendFriendRequest(
+                                                                name,
+                                                                tag,
+                                                              );
+                                                      if (error != null &&
+                                                          context.mounted) {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              error,
+                                                            ),
+                                                          ),
                                                         );
-                                                if (error != null &&
-                                                    context.mounted) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(error),
-                                                    ),
-                                                  );
-                                                } else if (context.mounted) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Anfrage gesendet!',
-                                                      ),
-                                                    ),
-                                                  );
-                                                }
-                                              }
-                                              : null,
+                                                      } else if (context
+                                                          .mounted) {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                              'Anfrage gesendet!',
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+                                                    }
+                                                    : null,
+                                          ),
+                                        );
+                                      },
                                     );
                                   },
                                 );
                               },
-                            );
-                          },
-                        ),
-                      ),
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () => viewModel.toggleReadyStatus(),
-                            child: Text(
-                              viewModel.isReady
-                                  ? l10n.labelNotReady
-                                  : l10n.labelReady,
                             ),
                           ),
-                          if (viewModel.isHost && viewModel.everyoneReady)
-                            ElevatedButton(
-                              onPressed: () => viewModel.startSettings(context),
-                              child: Text(l10n.labelStartGame),
+                        ),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            PerformanceWidget(
+                              name: 'ReadyButton',
+                              child: ElevatedButton(
+                                onPressed: () => viewModel.toggleReadyStatus(),
+                                child: Text(
+                                  viewModel.isReady
+                                      ? l10n.labelNotReady
+                                      : l10n.labelReady,
+                                ),
+                              ),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                            if (viewModel.isHost && viewModel.everyoneReady)
+                              ElevatedButton(
+                                onPressed:
+                                    () => viewModel.startSettings(context),
+                                child: Text(l10n.labelStartGame),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   ),
                 ),
               ),
