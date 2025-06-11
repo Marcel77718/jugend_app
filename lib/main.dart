@@ -71,7 +71,6 @@ void main() async {
   await BuildOptimizer.instance.initialize();
   await MemoryOptimizer.instance.initialize();
   await NetworkOptimizer.instance.initialize();
-  await FirebaseOptimizer.initializeAndGetInstance();
   await AssetOptimizer.instance.preloadAssets([
     // Füge hier wichtige Assets hinzu, die vorab geladen werden sollen
   ]);
@@ -88,6 +87,7 @@ void main() async {
 
       try {
         await initializeFirebase();
+        await FirebaseOptimizer.initializeAndGetInstance();
         runApp(const ProviderScope(child: MyApp()));
       } catch (e, stackTrace) {
         LoggingService.instance.log(

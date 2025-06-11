@@ -2,6 +2,10 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:io' show Platform;
+import 'package:jugend_app/firebase_options.dart';
 import 'package:jugend_app/core/logging_service.dart';
 import 'package:jugend_app/core/network_optimizer.dart';
 
@@ -49,7 +53,15 @@ class FirebaseOptimizer {
   Future<void> _initializeFirebase() async {
     // Firebase-App initialisieren, falls noch nicht geschehen
     if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp();
+      if (kIsWeb) {
+        await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
+      } else if (!Platform.isAndroid && !Platform.isIOS) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } else {
+        await Firebase.initializeApp();
+      }
     }
     // Initialisiere _firestore und _storage hier
     _firestore = FirebaseFirestore.instance;
