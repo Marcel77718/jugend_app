@@ -31,6 +31,32 @@
 
   <title>jugend_app</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Add Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-crashlytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-performance-compat.js"></script>
+
+  <script>
+    // Your web app's Firebase configuration (from lib/firebase_options.dart)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwQynDXhLoyd2gRNgJPz4F5CZlPFiRyso",
+      authDomain: "gatherup-g4ther.firebaseapp.com",
+      projectId: "gatherup-g4ther",
+      storageBucket: "gatherup-g4ther.appspot.com",
+      messagingSenderId: "824376832954",
+      appId: "1:824376832954:web:7a908324edea4e814f2383",
+      databaseURL: "https://gatherup-g4ther-default-rtdb.europe-west1.firebasedatabase.app",
+      measurementId: "G-2DVGZ57WJN",
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

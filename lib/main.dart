@@ -28,9 +28,7 @@ Future<void> initializeFirebase() async {
   try {
     if (Firebase.apps.isEmpty) {
       if (kIsWeb) {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
+        await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
       } else if (!Platform.isAndroid && !Platform.isIOS) {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,

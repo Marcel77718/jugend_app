@@ -61,7 +61,7 @@ class PlayerTile extends ConsumerWidget {
                       player['photoUrl'] ??
                       'https://ui-avatars.com/api/?name=${player['name']}',
               error:
-                  (_, __) =>
+                  (_, _) =>
                       'https://ui-avatars.com/api/?name=${player['name']}',
             ),
           ),
@@ -70,14 +70,14 @@ class PlayerTile extends ConsumerWidget {
           userData.when(
             data: (data) => data?['displayName'] ?? player['name'],
             loading: () => player['name'],
-            error: (_, __) => player['name'],
+            error: (_, _) => player['name'],
           ),
         ),
         subtitle: Text(
           userData.when(
             data: (data) => data?['tag'] ?? '',
             loading: () => '',
-            error: (_, __) => '',
+            error: (_, _) => '',
           ),
         ),
         trailing: Row(

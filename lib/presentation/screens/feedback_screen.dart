@@ -184,7 +184,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: viewModel.entries.length,
-                        separatorBuilder: (_, __) => const Divider(),
+                        separatorBuilder: (_, _) => const Divider(),
                         itemBuilder: (context, i) {
                           final entry = viewModel.entries[i];
                           return ListTile(
