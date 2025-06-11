@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jugend_app/core/logging_service.dart';
+import 'package:jugend_app/core/memory_optimizer.dart';
 
 class ImageService {
   static final ImageService _instance = ImageService._internal();
@@ -78,8 +79,12 @@ class ImageService {
         if (_preloadedUrls.contains(url)) continue;
 
         try {
-          await _cacheManager.getSingleFile(url);
+          final file = await _cacheManager.getSingleFile(url);
           _preloadedUrls.add(url);
+
+          // Tracke Cache-Größe
+          final fileSize = await file.length();
+          MemoryOptimizer.instance.trackCacheEntry(url, fileSize);
         } catch (e) {
           LoggingService.instance.log(
             'Fehler beim Vorladen des Bildes: $e',
@@ -113,6 +118,7 @@ class ImageService {
       _preloadedUrls.clear();
       _loadingQueue.clear();
       _isProcessingQueue = false;
+      MemoryOptimizer.instance.clearCache();
     } catch (e) {
       LoggingService.instance.log(
         'Fehler beim Leeren des Bild-Caches: $e',
@@ -127,6 +133,7 @@ class ImageService {
       await _cacheManager.removeFile(imageUrl);
       _preloadedUrls.remove(imageUrl);
       _loadingQueue.remove(imageUrl);
+      MemoryOptimizer.instance.removeCacheEntry(imageUrl);
     } catch (e) {
       LoggingService.instance.log(
         'Fehler beim Entfernen des Bildes aus dem Cache: $e',

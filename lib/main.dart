@@ -16,6 +16,11 @@ import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' show Platform;
 import 'package:jugend_app/core/performance_monitor.dart';
+import 'package:jugend_app/core/asset_optimizer.dart';
+import 'package:jugend_app/core/build_optimizer.dart';
+import 'package:jugend_app/core/firebase_optimizer.dart';
+import 'package:jugend_app/core/memory_optimizer.dart';
+import 'package:jugend_app/core/network_optimizer.dart';
 
 final localeProvider = StateProvider<Locale?>((ref) => const Locale('de'));
 
@@ -61,11 +66,25 @@ Future<void> initializeFirebase() async {
   }
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialisiere Optimizer
+  await BuildOptimizer.instance.initialize();
+  await MemoryOptimizer.instance.initialize();
+  await NetworkOptimizer.instance.initialize();
+  await FirebaseOptimizer.initializeAndGetInstance();
+  await AssetOptimizer.instance.preloadAssets([
+    // Füge hier wichtige Assets hinzu, die vorab geladen werden sollen
+  ]);
+
+  LoggingService.instance.log(
+    'Alle Optimizer initialisiert',
+    level: LogLevel.info,
+  );
+
   runZonedGuarded(
     () async {
-      WidgetsFlutterBinding.ensureInitialized();
-
       // Starte Performance-Monitoring
       PerformanceMonitor.instance.startMonitoring();
 
