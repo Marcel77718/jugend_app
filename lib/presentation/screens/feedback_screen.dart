@@ -1,228 +1,150 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:jugend_app/domain/viewmodels/feedback_view_model.dart';
-import 'package:jugend_app/data/services/device_id_helper.dart';
-import 'package:go_router/go_router.dart';
-import 'package:jugend_app/core/performance_monitor.dart';
-import 'package:jugend_app/generated/app_localizations.dart';
+import '../viewmodels/feedback_view_model.dart';
 
-class FeedbackScreen extends StatefulWidget {
+class FeedbackScreen extends StatelessWidget {
   const FeedbackScreen({super.key});
 
   @override
-  State<FeedbackScreen> createState() => _FeedbackScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => FeedbackViewModel(),
+      child: const FeedbackScreenContent(),
+    );
+  }
 }
 
-class _FeedbackScreenState extends State<FeedbackScreen> {
+class FeedbackScreenContent extends StatefulWidget {
+  const FeedbackScreenContent({super.key});
+
+  @override
+  State<FeedbackScreenContent> createState() => _FeedbackScreenContentState();
+}
+
+class _FeedbackScreenContentState extends State<FeedbackScreenContent> {
   final _formKey = GlobalKey<FormState>();
-  final _messageController = TextEditingController();
-  int _rating = 5;
-  String? _userName;
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  String _selectedCategory = '';
+  int _rating = 0;
 
   @override
   void dispose() {
-    _messageController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
-  }
-
-  Future<void> _submit(FeedbackViewModel viewModel) async {
-    if (!_formKey.currentState!.validate()) return;
-    final userId = await DeviceIdHelper.getSafeDeviceId();
-    await viewModel.submitFeedback(
-      userId: userId,
-      userName: _userName,
-      message: _messageController.text.trim(),
-      rating: _rating,
-      appVersion: null,
-      platform: null,
-    );
-
-    if (!mounted) return;
-
-    if (viewModel.submitSuccess) {
-      _messageController.clear();
-      setState(() => _rating = 5);
-      FocusScope.of(context).unfocus();
-      viewModel.resetSubmitState();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.feedbackSuccess)),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return ChangeNotifierProvider(
-      create: (_) => FeedbackViewModel()..loadFeedback(),
-      child: Consumer<FeedbackViewModel>(
-        builder: (context, viewModel, _) {
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => context.go('/'),
-              ),
-              title: Text(l10n.feedbackTitle),
-            ),
-            body: PerformanceWidget(
-              name: 'FeedbackContent',
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.feedbackFormTitle,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 16),
-                          PerformanceWidget(
-                            name: 'NameField',
-                            child: TextFormField(
-                              decoration: InputDecoration(
-                                labelText: l10n.feedbackName,
-                                border: const OutlineInputBorder(),
-                              ),
-                              onChanged: (val) => _userName = val.trim(),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          PerformanceWidget(
-                            name: 'MessageField',
-                            child: TextFormField(
-                              controller: _messageController,
-                              maxLines: 4,
-                              decoration: InputDecoration(
-                                labelText: l10n.feedbackMessage,
-                                border: const OutlineInputBorder(),
-                              ),
-                              validator:
-                                  (val) =>
-                                      (val == null || val.trim().isEmpty)
-                                          ? l10n.feedbackMessageRequired
-                                          : null,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(l10n.feedbackRating),
-                          PerformanceWidget(
-                            name: 'RatingStars',
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(
-                                5,
-                                (i) => IconButton(
-                                  icon: Icon(
-                                    i < _rating
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    color: Colors.amber,
-                                  ),
-                                  onPressed:
-                                      () => setState(() => _rating = i + 1),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          PerformanceWidget(
-                            name: 'SubmitButton',
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed:
-                                    viewModel.isSubmitting
-                                        ? null
-                                        : () => _submit(viewModel),
-                                child:
-                                    viewModel.isSubmitting
-                                        ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                        : Text(l10n.feedbackSubmit),
-                              ),
-                            ),
-                          ),
-                          if (viewModel.submitError != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(
-                                viewModel.submitError!,
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      l10n.feedbackListTitle,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    if (viewModel.isLoading)
-                      const Center(child: CircularProgressIndicator()),
-                    if (viewModel.error != null)
-                      Text(
-                        viewModel.error!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    if (!viewModel.isLoading && viewModel.entries.isEmpty)
-                      Text(l10n.feedbackListEmpty),
-                    if (viewModel.entries.isNotEmpty)
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: viewModel.entries.length,
-                        separatorBuilder: (_, _) => const Divider(),
-                        itemBuilder: (context, i) {
-                          final entry = viewModel.entries[i];
-                          return ListTile(
-                            leading: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: List.generate(
-                                5,
-                                (j) => Icon(
-                                  j < entry.rating
-                                      ? Icons.star
-                                      : Icons.star_border,
-                                  color: Colors.amber,
-                                  size: 16,
-                                ),
-                              ),
-                            ),
-                            title: Text(entry.message),
-                            subtitle: Text(
-                              entry.userName?.isNotEmpty == true
-                                  ? entry.userName!
-                                  : l10n.feedbackAnonymous,
-                            ),
-                            trailing: Text(
-                              '${entry.createdAt.day.toString().padLeft(2, '0')}.${entry.createdAt.month.toString().padLeft(2, '0')}.${entry.createdAt.year}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                  ],
+    final viewModel = context.watch<FeedbackViewModel>();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Feedback')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Titel',
+                  hintText: 'z.B. Bug in der Freundesliste',
                 ),
+                validator: viewModel.validateTitle,
               ),
-            ),
-          );
-        },
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Beschreibung',
+                  hintText: 'Beschreibe dein Feedback so genau wie möglich',
+                ),
+                maxLines: 5,
+                validator: viewModel.validateDescription,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedCategory.isEmpty ? null : _selectedCategory,
+                decoration: const InputDecoration(labelText: 'Kategorie'),
+                items:
+                    viewModel.categories.map((category) {
+                      return DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCategory = value ?? '';
+                  });
+                },
+                validator: viewModel.validateCategory,
+              ),
+              const SizedBox(height: 16),
+              const Text('Bewertung'),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    icon: Icon(
+                      index < _rating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _rating = index + 1;
+                      });
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState?.validate() ?? false) {
+                    if (viewModel.validateRating(_rating) != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Bitte gib eine Bewertung ein'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    try {
+                      await viewModel.sendFeedback(
+                        title: _titleController.text,
+                        description: _descriptionController.text,
+                        category: _selectedCategory,
+                        rating: _rating,
+                      );
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Feedback erfolgreich gesendet'),
+                          ),
+                        );
+                        Navigator.pop(context);
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Fehler: ${e.toString()}')),
+                        );
+                      }
+                    }
+                  }
+                },
+                child: const Text('Feedback senden'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

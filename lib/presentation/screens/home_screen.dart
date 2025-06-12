@@ -14,20 +14,26 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const Scaffold(
+        body: Center(child: Text('Lokalisation nicht geladen')),
+      );
+    }
     return riverpod.Consumer(
       builder: (context, ref, _) {
         final auth = ref.watch(authViewModelProvider);
         ref.read(authViewModelProvider.notifier);
-        final profile = ref.watch(userProfileProvider(auth.profile?.uid));
-
-        return _buildScaffold(
-          context,
-          l10n,
-          auth,
-          profile.value ?? auth.profile,
-          ref,
-        );
+        // profile kann null sein, daher absichern
+        UserProfile? profile;
+        try {
+          profile =
+              ref.watch(userProfileProvider(auth.profile?.uid)).value ??
+              auth.profile;
+        } catch (_) {
+          profile = null;
+        }
+        return _buildScaffold(context, l10n, auth, profile, ref);
       },
     );
   }

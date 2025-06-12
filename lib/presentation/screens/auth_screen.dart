@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
-import 'package:jugend_app/core/snackbar_helper.dart';
-import 'package:jugend_app/core/performance_monitor.dart';
-import 'package:go_router/go_router.dart';
+import '../viewmodels/auth_view_model.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -16,87 +13,74 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _passwordRepeatController = TextEditingController();
+  final _nameController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _passwordRepeatController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
-  void _submit(AuthViewModel viewModel) async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!viewModel.isLogin) {
-      if (_passwordController.text != _passwordRepeatController.text) {
-        viewModel.setPasswordRepeatError('Passwörter stimmen nicht überein');
-        return;
-      } else {
-        viewModel.setPasswordRepeatError(null);
-      }
-    }
-    final locale = Localizations.localeOf(context).languageCode;
-    if (viewModel.isLogin) {
-      await viewModel.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-        locale: locale,
+
+    final viewModel = ref.read(authViewModelProvider.notifier);
+    final state = ref.read(authViewModelProvider);
+
+    if (state.isLogin) {
+      await viewModel.login(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
-      if (!mounted) return;
     } else {
-      await viewModel.signUpWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-      await viewModel.sendEmailVerification();
-      if (!mounted) return;
-      viewModel.setShowVerificationNotice(true);
-      SnackbarHelper.success(
-        context,
-        'Verifizierungs-E-Mail wurde gesendet. Bitte prüfe deine E-Mails.',
+      await viewModel.register(
+        email: _emailController.text,
+        password: _passwordController.text,
+        name: _nameController.text,
       );
     }
+  }
+
+  Future<void> _resetPassword() async {
+    if (_emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte gib deine E-Mail-Adresse ein'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    await ref
+        .read(authViewModelProvider.notifier)
+        .resetPassword(_emailController.text);
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authViewModelProvider);
-    final viewModel = ref.watch(authViewModelProvider.notifier);
+    final state = ref.watch(authViewModelProvider);
+    final viewModel = ref.read(authViewModelProvider.notifier);
 
-    // Automatische Navigation nach Login
-    if (authState.status == AuthStatus.signedIn) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (ModalRoute.of(context)?.settings.name != '/') {
-          // GoRouter verwenden
-          if (mounted) {
-            context.go('/');
-          }
-        }
-      });
-    }
-
-    return PerformanceWidget(
-      name: 'AuthScreen',
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Zurück',
-            onPressed: () => context.go('/'),
-          ),
-          title: const Text('Anmeldung'),
-          centerTitle: true,
-          elevation: 0,
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (viewModel.showVerificationNotice)
+                const Text(
+                  'Willkommen',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                if (state.showVerificationNotice)
                   Container(
                     padding: const EdgeInsets.all(16),
                     margin: const EdgeInsets.only(bottom: 16),
@@ -116,17 +100,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Bitte gib deine E-Mail-Adresse ein';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Bitte gib eine gültige E-Mail-Adresse ein';
-                    }
-                    return null;
-                  },
+                  validator: viewModel.validateEmail,
                 ),
                 const SizedBox(height: 16),
+                if (!state.isLogin) ...[
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: viewModel.validateName,
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 TextFormField(
                   controller: _passwordController,
                   decoration: const InputDecoration(
@@ -134,137 +121,44 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     border: OutlineInputBorder(),
                   ),
                   obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Bitte gib dein Passwort ein';
-                    }
-                    if (!viewModel.isLogin && value.length < 6) {
-                      return 'Das Passwort muss mindestens 6 Zeichen lang sein';
-                    }
-                    return null;
-                  },
+                  validator: viewModel.validatePassword,
                 ),
-                if (!viewModel.isLogin) ...[
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: state.isLoading ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child:
+                      state.isLoading
+                          ? const CircularProgressIndicator()
+                          : Text(state.isLogin ? 'Einloggen' : 'Registrieren'),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: state.isLoading ? null : viewModel.toggleLoginMode,
+                  child: Text(
+                    state.isLogin
+                        ? 'Noch kein Konto? Registrieren'
+                        : 'Bereits ein Konto? Einloggen',
+                  ),
+                ),
+                if (state.isLogin) ...[
                   const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordRepeatController,
-                    decoration: InputDecoration(
-                      labelText: 'Passwort wiederholen',
-                      border: const OutlineInputBorder(),
-                      errorText: viewModel.passwordRepeatError,
-                    ),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Bitte wiederhole dein Passwort';
-                      }
-                      return null;
-                    },
+                  TextButton(
+                    onPressed: state.isLoading ? null : _resetPassword,
+                    child: const Text('Passwort vergessen?'),
                   ),
                 ],
-                if (viewModel.isLogin) ...[
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed:
-                          authState.status == AuthStatus.loading
-                              ? null
-                              : () async {
-                                final email = await showDialog<String>(
-                                  context: context,
-                                  builder: (context) {
-                                    final controller = TextEditingController(
-                                      text: _emailController.text,
-                                    );
-                                    return AlertDialog(
-                                      title: const Text(
-                                        'Passwort zurücksetzen',
-                                      ),
-                                      content: TextField(
-                                        controller: controller,
-                                        decoration: const InputDecoration(
-                                          labelText: 'E-Mail',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        keyboardType:
-                                            TextInputType.emailAddress,
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed:
-                                              () => Navigator.pop(context),
-                                          child: const Text('Abbrechen'),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed:
-                                              () => Navigator.pop(
-                                                context,
-                                                controller.text,
-                                              ),
-                                          child: const Text('Senden'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                                if (email != null && email.contains('@')) {
-                                  await viewModel.sendPasswordResetEmail(email);
-                                }
-                              },
-                      child: const Text('Passwort vergessen?'),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed:
-                        authState.status == AuthStatus.loading
-                            ? null
-                            : () => _submit(viewModel),
-                    child: Text(viewModel.isLogin ? 'Login' : 'Registrieren'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Google Login Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.login),
-                    onPressed:
-                        authState.status == AuthStatus.loading
-                            ? null
-                            : () async {
-                              await ref
-                                  .read(authViewModelProvider.notifier)
-                                  .signInWithGoogle();
-                            },
-                    label: const Text('Mit Google anmelden'),
-                  ),
-                ),
-                if (authState.status == AuthStatus.loading)
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                if (authState.error != null)
+                if (state.error != null)
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
-                      authState.error!,
+                      state.error!,
                       style: const TextStyle(color: Colors.red),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                TextButton(
-                  onPressed: () => viewModel.toggleLoginMode(),
-                  child: Text(
-                    viewModel.isLogin
-                        ? 'Noch kein Konto? Registrieren'
-                        : 'Schon registriert? Login',
-                  ),
-                ),
               ],
             ),
           ),
