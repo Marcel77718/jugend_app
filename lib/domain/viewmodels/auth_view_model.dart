@@ -150,19 +150,40 @@ class AuthViewModel extends StateNotifier<AuthState> {
         return;
       }
       // Kein State setzen, Auth-Stream übernimmt
-    } catch (e) {
-      // Ersetze den print-Aufruf
+    } on FirebaseAuthException catch (e) {
       LoggingService.instance.log(
         'Fehler bei der Authentifizierung',
         level: LogLevel.error,
         error: e,
       );
-      // Allgemeine Fehlermeldung, sprachabhängig
+      String msg;
+      switch (e.code) {
+        case 'user-not-found':
+          msg = 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.';
+          break;
+        case 'wrong-password':
+          msg = 'Falsches Passwort.';
+          break;
+        case 'invalid-email':
+          msg = 'Ungültige E-Mail-Adresse.';
+          break;
+        case 'user-disabled':
+          msg = 'Dieser Account wurde deaktiviert.';
+          break;
+        default:
+          msg = 'Login fehlgeschlagen. Bitte überprüfe deine Eingaben.';
+      }
+      state = AuthState(status: AuthStatus.signedOut, error: msg);
+    } catch (e) {
+      LoggingService.instance.log(
+        'Fehler bei der Authentifizierung',
+        level: LogLevel.error,
+        error: e,
+      );
       String msg =
           (locale == 'en')
               ? 'Login failed. Please check your credentials.'
               : 'Login fehlgeschlagen. Bitte überprüfe deine Eingaben.';
-      // Wenn es ein Netzwerkproblem ist, spezifisch anzeigen
       if (e.toString().contains('unavailable') ||
           e.toString().contains('network')) {
         msg =

@@ -37,10 +37,12 @@ Future<void> initializeFirebase() async {
         await Firebase.initializeApp();
       }
 
-      // Initialisiere Crashlytics
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-        !kDebugMode,
-      );
+      // Initialisiere Crashlytics nur auf unterstützten Plattformen
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+          !kDebugMode,
+        );
+      }
 
       // Setze Benutzer-ID für Crashlytics, falls verfügbar
       final user = FirebaseAuth.instance.currentUser;

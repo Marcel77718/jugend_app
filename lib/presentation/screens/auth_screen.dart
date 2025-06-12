@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:jugend_app/core/performance_monitor.dart';
+import 'package:go_router/go_router.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -60,14 +61,33 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = ref.watch(authViewModelProvider.notifier);
     final authState = ref.watch(authViewModelProvider);
+    final viewModel = ref.watch(authViewModelProvider.notifier);
+
+    // Automatische Navigation nach Login
+    if (authState.status == AuthStatus.signedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (ModalRoute.of(context)?.settings.name != '/') {
+          // GoRouter verwenden
+          if (mounted) {
+            context.go('/');
+          }
+        }
+      });
+    }
 
     return PerformanceWidget(
       name: 'AuthScreen',
       child: Scaffold(
         appBar: AppBar(
-          title: Text(viewModel.isLogin ? 'Login' : 'Registrierung'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Zurück',
+            onPressed: () => context.go('/'),
+          ),
+          title: const Text('Anmeldung'),
+          centerTitle: true,
+          elevation: 0,
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -206,6 +226,37 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     child: Text(viewModel.isLogin ? 'Login' : 'Registrieren'),
                   ),
                 ),
+                const SizedBox(height: 16),
+                // Google Login Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.login),
+                    onPressed:
+                        authState.status == AuthStatus.loading
+                            ? null
+                            : () async {
+                              await ref
+                                  .read(authViewModelProvider.notifier)
+                                  .signInWithGoogle();
+                            },
+                    label: const Text('Mit Google anmelden'),
+                  ),
+                ),
+                if (authState.status == AuthStatus.loading)
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                if (authState.error != null)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      authState.error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 TextButton(
                   onPressed: () => viewModel.toggleLoginMode(),
                   child: Text(
