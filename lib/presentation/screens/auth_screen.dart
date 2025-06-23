@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../viewmodels/auth_view_model.dart';
+import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -25,20 +25,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
     final viewModel = ref.read(authViewModelProvider.notifier);
     final state = ref.read(authViewModelProvider);
-
-    if (state.isLogin) {
-      await viewModel.login(
-        email: _emailController.text,
-        password: _passwordController.text,
+    if (state.status == AuthStatus.loading) {
+      // ...
+    } else if (state.status == AuthStatus.signedOut) {
+      await viewModel.signUpWithEmail(
+        _emailController.text,
+        _passwordController.text,
       );
-    } else {
-      await viewModel.register(
-        email: _emailController.text,
-        password: _passwordController.text,
-        name: _nameController.text,
+    } else if (state.status == AuthStatus.signedIn) {
+      await viewModel.signInWithEmail(
+        _emailController.text,
+        _passwordController.text,
       );
     }
   }
@@ -53,17 +52,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       );
       return;
     }
-
     await ref
         .read(authViewModelProvider.notifier)
-        .resetPassword(_emailController.text);
+        .sendPasswordResetEmail(_emailController.text);
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(authViewModelProvider);
     final viewModel = ref.read(authViewModelProvider.notifier);
-
+    final state = ref.watch(authViewModelProvider);
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -80,7 +77,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-                if (state.showVerificationNotice)
+                if (viewModel.showVerificationNotice)
                   Container(
                     padding: const EdgeInsets.all(16),
                     margin: const EdgeInsets.only(bottom: 16),
@@ -100,17 +97,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
-                  validator: viewModel.validateEmail,
+                  validator:
+                      (value) =>
+                          value == null || value.isEmpty
+                              ? 'Bitte gib eine E-Mail-Adresse ein'
+                              : null,
                 ),
                 const SizedBox(height: 16),
-                if (!state.isLogin) ...[
+                if (!viewModel.isLogin) ...[
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
                       labelText: 'Name',
                       border: OutlineInputBorder(),
                     ),
-                    validator: viewModel.validateName,
+                    validator:
+                        (value) =>
+                            value == null || value.isEmpty
+                                ? 'Bitte gib einen Namen ein'
+                                : null,
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -121,32 +126,47 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     border: OutlineInputBorder(),
                   ),
                   obscureText: true,
-                  validator: viewModel.validatePassword,
+                  validator:
+                      (value) =>
+                          value == null || value.isEmpty
+                              ? 'Bitte gib ein Passwort ein'
+                              : null,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: state.isLoading ? null : _submit,
+                  onPressed:
+                      state.status == AuthStatus.loading ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child:
-                      state.isLoading
+                      state.status == AuthStatus.loading
                           ? const CircularProgressIndicator()
-                          : Text(state.isLogin ? 'Einloggen' : 'Registrieren'),
+                          : Text(
+                            state.status == AuthStatus.signedOut
+                                ? 'Registrieren'
+                                : 'Einloggen',
+                          ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: state.isLoading ? null : viewModel.toggleLoginMode,
+                  onPressed:
+                      state.status == AuthStatus.loading
+                          ? null
+                          : viewModel.toggleLoginMode,
                   child: Text(
-                    state.isLogin
+                    viewModel.isLogin
                         ? 'Noch kein Konto? Registrieren'
                         : 'Bereits ein Konto? Einloggen',
                   ),
                 ),
-                if (state.isLogin) ...[
+                if (viewModel.isLogin) ...[
                   const SizedBox(height: 16),
                   TextButton(
-                    onPressed: state.isLoading ? null : _resetPassword,
+                    onPressed:
+                        state.status == AuthStatus.loading
+                            ? null
+                            : _resetPassword,
                     child: const Text('Passwort vergessen?'),
                   ),
                 ],

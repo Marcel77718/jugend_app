@@ -1,77 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../viewmodels/friends_view_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jugend_app/domain/viewmodels/friend_view_model.dart';
 
-class FriendsScreen extends StatelessWidget {
+class FriendsScreen extends ConsumerWidget {
   const FriendsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => FriendsViewModel(),
-      child: const FriendsScreenContent(),
-    );
-  }
-}
-
-class FriendsScreenContent extends StatelessWidget {
-  const FriendsScreenContent({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<FriendsViewModel>();
-
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewModel = ref.watch(friendViewModelProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Freunde'),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add),
-            onPressed: () => _showAddFriendDialog(context),
+            onPressed: () => _showAddFriendDialog(context, viewModel),
           ),
         ],
       ),
-      body: StreamBuilder<List<FriendViewModel>>(
+      body: StreamBuilder(
         stream: viewModel.friendsStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Fehler: ${snapshot.error}'));
+            return Center(child: Text('Fehler: snapshot.error}'));
           }
-
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-
           final friends = snapshot.data!;
           if (friends.isEmpty) {
             return const Center(child: Text('Keine Freunde gefunden'));
           }
-
           return ListView.builder(
             itemCount: friends.length,
             itemBuilder: (context, index) {
               final friend = friends[index];
               return ListTile(
-                leading: CircleAvatar(backgroundColor: friend.statusColor),
-                title: Text(friend.name),
-                subtitle: Text('@${friend.tag} - ${friend.statusText}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (friend.status == 'in_lobby' && friend.lobbyId != null)
-                      IconButton(
-                        icon: const Icon(Icons.play_arrow),
-                        onPressed:
-                            () => viewModel.joinFriendLobby(
-                              friend.lobbyId!,
-                              context,
-                            ),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => viewModel.removeFriend(friend.id),
-                    ),
-                  ],
+                leading: const CircleAvatar(),
+                title: Text(friend.friendName),
+                subtitle: Text('@friend.friendTag'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => viewModel.removeFriend(friend),
                 ),
               );
             },
@@ -81,10 +51,8 @@ class FriendsScreenContent extends StatelessWidget {
     );
   }
 
-  void _showAddFriendDialog(BuildContext context) {
-    final viewModel = context.read<FriendsViewModel>();
+  void _showAddFriendDialog(BuildContext context, FriendViewModel viewModel) {
     final controller = TextEditingController();
-
     showDialog(
       context: context,
       builder:
@@ -105,8 +73,18 @@ class FriendsScreenContent extends StatelessWidget {
               TextButton(
                 onPressed: () async {
                   try {
-                    await viewModel.addFriend(controller.text);
-                    if (context.mounted) Navigator.pop(context);
+                    final error = await viewModel.sendFriendRequest(
+                      controller.text,
+                      '',
+                    );
+                    if (context.mounted && error == null) {
+                      Navigator.pop(context);
+                    }
+                    if (context.mounted && error != null) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(error)));
+                    }
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(

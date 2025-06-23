@@ -1,125 +1,100 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
-import '../viewmodels/profile_view_model.dart';
-import 'dart:io';
+import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProfileViewModel(),
-      child: const ProfileScreenContent(),
-    );
-  }
-}
-
-class ProfileScreenContent extends StatelessWidget {
-  const ProfileScreenContent({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<ProfileViewModel>();
-
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(authViewModelProvider);
+    final viewModel = ref.read(authViewModelProvider.notifier);
+    final profile = state.profile;
+    if (profile == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profil'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => _showSignOutDialog(context),
+            onPressed: () => _showSignOutDialog(context, viewModel),
           ),
         ],
       ),
-      body: StreamBuilder<ProfileData>(
-        stream: viewModel.profileStream,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Fehler: ${snapshot.error}'));
-          }
-
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final profile = snapshot.data!;
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: () => _pickImage(context),
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundImage:
-                            profile.photoUrl.isNotEmpty
-                                ? NetworkImage(profile.photoUrl)
-                                : const NetworkImage(
-                                  'https://ui-avatars.com/api/?name=User',
-                                ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () => _pickImage(context, viewModel),
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundImage:
+                        profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                            ? NetworkImage(profile.photoUrl!)
+                            : const NetworkImage(
+                              'https://ui-avatars.com/api/?name=User',
+                            ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  profile.name,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                Text(
-                  '@${profile.tag}',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 40),
-                ListTile(
-                  leading: const Icon(Icons.edit),
-                  title: const Text('Name ändern'),
-                  onTap: () => _showNameDialog(context),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.delete, color: Colors.red),
-                  title: const Text('Account löschen'),
-                  onTap: () => _showDeleteAccountDialog(context),
-                ),
-              ],
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        },
+            const SizedBox(height: 20),
+            Text(
+              profile.displayName ?? '',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            Text(
+              '@${profile.tag}',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 40),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Name ändern'),
+              onTap: () => _showNameDialog(context, viewModel),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Account löschen'),
+              onTap: () => _showDeleteAccountDialog(context, viewModel),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _pickImage(BuildContext context) async {
-    final viewModel = context.read<ProfileViewModel>();
+  Future<void> _pickImage(BuildContext context, AuthViewModel viewModel) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
     if (pickedFile != null) {
       try {
-        await viewModel.updateProfilePicture(File(pickedFile.path));
+        await viewModel.updateProfile(photoUrl: pickedFile.path);
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(
@@ -130,10 +105,8 @@ class ProfileScreenContent extends StatelessWidget {
     }
   }
 
-  void _showNameDialog(BuildContext context) {
-    final viewModel = context.read<ProfileViewModel>();
+  void _showNameDialog(BuildContext context, AuthViewModel viewModel) {
     final controller = TextEditingController();
-
     showDialog(
       context: context,
       builder:
@@ -151,7 +124,7 @@ class ProfileScreenContent extends StatelessWidget {
               TextButton(
                 onPressed: () async {
                   try {
-                    await viewModel.updateName(controller.text);
+                    await viewModel.updateProfile(displayName: controller.text);
                     if (context.mounted) Navigator.pop(context);
                   } catch (e) {
                     if (context.mounted) {
@@ -168,9 +141,7 @@ class ProfileScreenContent extends StatelessWidget {
     );
   }
 
-  void _showSignOutDialog(BuildContext context) {
-    final viewModel = context.read<ProfileViewModel>();
-
+  void _showSignOutDialog(BuildContext context, AuthViewModel viewModel) {
     showDialog(
       context: context,
       builder:
@@ -197,9 +168,7 @@ class ProfileScreenContent extends StatelessWidget {
     );
   }
 
-  void _showDeleteAccountDialog(BuildContext context) {
-    final viewModel = context.read<ProfileViewModel>();
-
+  void _showDeleteAccountDialog(BuildContext context, AuthViewModel viewModel) {
     showDialog(
       context: context,
       builder:
@@ -216,7 +185,7 @@ class ProfileScreenContent extends StatelessWidget {
               TextButton(
                 onPressed: () async {
                   try {
-                    await viewModel.deleteAccount();
+                    await viewModel.deleteAccountAndData();
                     if (context.mounted) {
                       Navigator.pop(context);
                       context.go('/auth');

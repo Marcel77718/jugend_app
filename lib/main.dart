@@ -6,7 +6,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
-import 'package:jugend_app/core/feedback_service.dart';
 import 'package:jugend_app/core/logging_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
@@ -85,57 +84,4 @@ class MyApp extends ConsumerWidget {
       routerConfig: appRouter,
     );
   }
-}
-
-class FeedbackListener extends ConsumerStatefulWidget {
-  final Widget child;
-  const FeedbackListener({super.key, required this.child});
-
-  @override
-  ConsumerState<FeedbackListener> createState() => _FeedbackListenerState();
-}
-
-class _FeedbackListenerState extends ConsumerState<FeedbackListener> {
-  StreamSubscription<String>? _snackbarSub;
-  StreamSubscription<String>? _errorSub;
-
-  @override
-  void initState() {
-    super.initState();
-    _snackbarSub = FeedbackService.instance.snackbarStream.listen((msg) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(msg)));
-      }
-    });
-    _errorSub = FeedbackService.instance.errorStream.listen((msg) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder:
-              (ctx) => AlertDialog(
-                title: const Text('Fehler'),
-                content: Text(msg),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-        );
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _snackbarSub?.cancel();
-    _errorSub?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
 }
