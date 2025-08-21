@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
-import 'package:jugend_app/data/services/lobby_service.dart';
+import 'package:jugend_app/data/repositories/lobby_repository.dart';
 
 class FriendViewModel extends ChangeNotifier {
   final FriendService _service;
@@ -51,7 +51,7 @@ class FriendViewModel extends ChangeNotifier {
 
   // Prüfe ob eine Lobby existiert
   Future<bool> checkLobbyExists(String lobbyId) async {
-    return await LobbyService.lobbyExists(lobbyId);
+    return await LobbyRepository().lobbyExists(lobbyId);
   }
 
   // Suche nach User per Name#Tag

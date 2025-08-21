@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
+import 'package:jugend_app/data/models/reconnect_data.dart';
 
-class GameSettingsScreen extends StatelessWidget {
-  const GameSettingsScreen({super.key});
+class GameSettingsScreen extends ConsumerWidget {
+  final ReconnectData data;
+  const GameSettingsScreen({super.key, required this.data});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<LobbyViewModel>(
-      builder: (context, viewModel, _) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewModel = ref.watch(lobbyViewModelProvider(data));
+    return Builder(
+      builder: (context) {
         if (viewModel.isHost) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             viewModel.updateStageForCurrentScreen('settings');

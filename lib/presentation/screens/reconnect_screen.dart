@@ -4,17 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:jugend_app/data/services/device_id_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/presentation/dialogs/reconnect_dialog.dart';
 
-class ReconnectScreen extends StatefulWidget {
+class ReconnectScreen extends ConsumerStatefulWidget {
   const ReconnectScreen({super.key});
 
   @override
-  State<ReconnectScreen> createState() => _ReconnectScreenState();
+  ConsumerState<ReconnectScreen> createState() => _ReconnectScreenState();
 }
 
-class _ReconnectScreenState extends State<ReconnectScreen> {
+class _ReconnectScreenState extends ConsumerState<ReconnectScreen> {
   final ReconnectService _reconnectService = ReconnectService();
   bool _isLoading = true;
   String? _error;
@@ -44,8 +45,8 @@ class _ReconnectScreenState extends State<ReconnectScreen> {
         );
         if (!mounted) return;
         if (result == true) {
-          final viewModel = LobbyViewModel();
-          await viewModel.handleReconnect(context, reconnectData);
+          final vm = ref.read(lobbyViewModelProvider(reconnectData));
+          await vm.handleReconnect(context, reconnectData);
         } else {
           await _reconnectService.clearReconnectData(deviceId);
           if (!mounted) return;

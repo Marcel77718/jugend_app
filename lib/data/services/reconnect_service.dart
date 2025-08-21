@@ -3,7 +3,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jugend_app/data/services/device_id_helper.dart';
 import 'package:jugend_app/data/models/reconnect_data.dart';
-import 'package:jugend_app/data/services/lobby_service.dart';
+import 'package:jugend_app/data/repositories/lobby_repository.dart';
 
 class ReconnectService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -14,7 +14,7 @@ class ReconnectService {
       final data = ReconnectData.fromMap(doc.data()!);
 
       // Überprüfe, ob die Lobby noch existiert
-      final lobbyExists = await LobbyService.lobbyExists(data.lobbyId);
+      final lobbyExists = await LobbyRepository().lobbyExists(data.lobbyId);
       if (!lobbyExists) {
         // Lösche Reconnect-Daten, wenn die Lobby nicht mehr existiert
         await clearReconnectData(deviceId);

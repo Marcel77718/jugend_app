@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:jugend_app/core/app_routes.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jugend_app/data/providers/user_providers.dart';
 
 class FriendsScreen extends ConsumerWidget {
   const FriendsScreen({super.key});
@@ -139,18 +139,14 @@ class _FriendTile extends ConsumerWidget {
         final isInGame = status == 'game';
         final isInLobby = status == 'lobby';
 
-        return StreamBuilder<DocumentSnapshot>(
-          stream:
-              FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(friend.friendUid)
-                  .snapshots(),
-          builder: (context, userSnapshot) {
-            String? photoUrl;
-            if (userSnapshot.hasData && userSnapshot.data!.exists) {
-              final data = userSnapshot.data!.data() as Map<String, dynamic>;
-              photoUrl = data['photoUrl'] as String?;
-            }
+        return Consumer(
+          builder: (context, ref, _) {
+            final userData = ref.watch(userDataProvider(friend.friendUid));
+            final photoUrl = userData.when(
+              data: (d) => d?['photoUrl'] as String?,
+              loading: () => null,
+              error: (_, __) => null,
+            );
             return ListTile(
               leading: Stack(
                 children: [

@@ -15,6 +15,7 @@ import 'package:jugend_app/data/services/auth_service.dart';
 import 'package:jugend_app/core/logging_service.dart';
 
 class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
+  final Ref _ref;
   late String _lobbyId;
   late String _playerName;
   late bool _isHost;
@@ -33,15 +34,15 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
   StreamSubscription? _playerStreamSub;
   final ILobbyRepository _lobbyRepository;
 
-  LobbyViewModel({ILobbyRepository? lobbyRepository})
-    : _lobbyRepository = lobbyRepository ?? LobbyRepository();
+  LobbyViewModel({required Ref ref, ILobbyRepository? lobbyRepository})
+    : _ref = ref,
+      _lobbyRepository = lobbyRepository ?? LobbyRepository();
 
   Future<void> initialize({
     required String lobbyId,
     required String playerName,
     required bool isHost,
     required String gameType,
-    BuildContext? context,
   }) async {
     // Registriere Lifecycle Observer
     WidgetsBinding.instance.addObserver(this);
@@ -119,10 +120,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _viewModelInitialized = true;
     // Setze initialen Status auf 'lobby' und currentLobbyId
     final currentUser = AuthService().currentUser;
-    if (currentUser != null && context != null) {
-      if (!context.mounted) return;
-      final container = ProviderScope.containerOf(context);
-      await container
+    if (currentUser != null) {
+      await _ref
           .read(authViewModelProvider.notifier)
           .setPresenceStatus('lobby');
       await _firestore.collection('users').doc(currentUser.uid).update({
@@ -355,16 +354,14 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> leaveLobby({BuildContext? context}) async {
+  Future<void> leaveLobby() async {
     try {
       final currentUser = AuthService().currentUser;
       await _lobbyRef.doc(_deviceId).delete();
       await _lobbyRepository.clearReconnectData(_deviceId);
       // Setze Status auf online (wenn eingeloggt) oder offline und entferne currentLobbyId
-      if (currentUser != null && context != null) {
-        if (!context.mounted) return;
-        final container = ProviderScope.containerOf(context);
-        await container
+      if (currentUser != null) {
+        await _ref
             .read(authViewModelProvider.notifier)
             .setPresenceStatus('online');
         await _firestore.collection('users').doc(currentUser.uid).update({
@@ -403,10 +400,8 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
         await _firestore.collection('lobbies').doc(_lobbyId).delete();
       }
 
-      if (context != null && currentUser != null) {
-        if (!context.mounted) return;
-        final container = ProviderScope.containerOf(context);
-        await container
+      if (currentUser != null) {
+        await _ref
             .read(authViewModelProvider.notifier)
             .setPresenceStatus('online');
       }
@@ -542,10 +537,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze Status auf 'game'
     final currentUser = AuthService().currentUser;
     if (currentUser != null) {
-      final container = ProviderScope.containerOf(context);
-      await container
-          .read(authViewModelProvider.notifier)
-          .setPresenceStatus('game');
+      await _ref.read(authViewModelProvider.notifier).setPresenceStatus('game');
       await _firestore.collection('users').doc(currentUser.uid).update({
         'currentLobbyId': _lobbyId,
       });
@@ -564,10 +556,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
       if (!context.mounted) return;
       GoRouter.of(context).go(AppRoutes.gameSettings, extra: reconnectData);
     }
-    final container = ProviderScope.containerOf(context);
-    await container
-        .read(authViewModelProvider.notifier)
-        .setPresenceStatus('game');
+    await _ref.read(authViewModelProvider.notifier).setPresenceStatus('game');
   }
 
   void listenForGameStart(BuildContext context) {
@@ -588,8 +577,7 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
     // Setze Status auf 'lobby' (falls noch nicht geschehen) und aktualisiere lastActive
     final currentUser = AuthService().currentUser;
     if (currentUser != null) {
-      final container = ProviderScope.containerOf(context);
-      await container
+      await _ref
           .read(authViewModelProvider.notifier)
           .setPresenceStatus('lobby');
       await _firestore.collection('users').doc(currentUser.uid).update({
@@ -633,3 +621,21 @@ class LobbyViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get mustChangeName => _mustChangeName;
 }
+
+final lobbyViewModelProvider = ChangeNotifierProvider.family<
+  LobbyViewModel,
+  ReconnectData
+>((ref, data) {
+  final viewModel = LobbyViewModel(ref: ref);
+  // Fire-and-forget initialization; UI observes viewModel.viewModelInitialized
+  // to render loading state until ready.
+  unawaited(
+    viewModel.initialize(
+      lobbyId: data.lobbyId,
+      playerName: data.playerName,
+      isHost: data.isHost,
+      gameType: data.gameType,
+    ),
+  );
+  return viewModel;
+});

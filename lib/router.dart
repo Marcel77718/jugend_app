@@ -10,9 +10,7 @@ import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:jugend_app/presentation/screens/reconnect_screen.dart';
 import 'package:jugend_app/presentation/screens/game_screen.dart';
 import 'package:jugend_app/presentation/screens/game_settings_screen.dart';
-import 'package:provider/provider.dart';
-import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
-import 'package:jugend_app/data/repositories/lobby_repository.dart';
+// import removed: lobby viewmodel is accessed inside screens via Riverpod
 import 'package:flutter/material.dart';
 import 'package:jugend_app/presentation/screens/feedback_screen.dart';
 import 'package:jugend_app/presentation/screens/games_catalog_screen.dart';
@@ -94,23 +92,11 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) {
         final data = state.extra as ReconnectData;
         return FadePageTransition(
-          child: ChangeNotifierProvider(
-            create:
-                (_) =>
-                    LobbyViewModel(lobbyRepository: LobbyRepository())
-                      ..initialize(
-                        lobbyId: data.lobbyId,
-                        playerName: data.playerName,
-                        isHost: data.isHost,
-                        gameType: data.gameType,
-                        context: context,
-                      ),
-            child: LobbyScreen(
-              lobbyId: data.lobbyId,
-              playerName: data.playerName,
-              isHost: data.isHost,
-              gameType: data.gameType,
-            ),
+          child: LobbyScreen(
+            lobbyId: data.lobbyId,
+            playerName: data.playerName,
+            isHost: data.isHost,
+            gameType: data.gameType,
           ),
         );
       },
@@ -122,21 +108,7 @@ final GoRouter appRouter = GoRouter(
         if (data is! ReconnectData) {
           return FadePageTransition(child: const HomeScreen());
         }
-        return FadePageTransition(
-          child: ChangeNotifierProvider(
-            create:
-                (_) =>
-                    LobbyViewModel(lobbyRepository: LobbyRepository())
-                      ..initialize(
-                        lobbyId: data.lobbyId,
-                        playerName: data.playerName,
-                        isHost: data.isHost,
-                        gameType: data.gameType,
-                        context: context,
-                      ),
-            child: GameScreen(gameId: data.lobbyId),
-          ),
-        );
+        return FadePageTransition(child: GameScreen(gameId: data.lobbyId));
       },
     ),
     GoRoute(
@@ -146,21 +118,7 @@ final GoRouter appRouter = GoRouter(
         if (data is! ReconnectData) {
           return FadePageTransition(child: const HomeScreen());
         }
-        return FadePageTransition(
-          child: ChangeNotifierProvider(
-            create:
-                (_) =>
-                    LobbyViewModel(lobbyRepository: LobbyRepository())
-                      ..initialize(
-                        lobbyId: data.lobbyId,
-                        playerName: data.playerName,
-                        isHost: data.isHost,
-                        gameType: data.gameType,
-                        context: context,
-                      ),
-            child: const GameSettingsScreen(),
-          ),
-        );
+        return FadePageTransition(child: GameSettingsScreen(data: data));
       },
     ),
     GoRoute(

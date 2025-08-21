@@ -1,20 +1,19 @@
 // Datei: lib/view/lobby_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart' as p;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:jugend_app/domain/viewmodels/lobby_view_model.dart';
 import 'package:jugend_app/presentation/widgets/player_tile.dart';
-import 'package:jugend_app/data/repositories/lobby_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jugend_app/data/models/reconnect_data.dart';
 import 'package:jugend_app/domain/viewmodels/friend_view_model.dart';
 import 'package:jugend_app/data/models/friend.dart';
 import 'package:jugend_app/core/app_routes.dart';
 import 'package:jugend_app/core/performance_monitor.dart';
 import 'package:jugend_app/generated/app_localizations.dart';
 
-class LobbyScreen extends StatefulWidget {
+class LobbyScreen extends ConsumerStatefulWidget {
   final String lobbyId;
   final String playerName;
   final bool isHost;
@@ -29,10 +28,10 @@ class LobbyScreen extends StatefulWidget {
   });
 
   @override
-  State<LobbyScreen> createState() => _LobbyScreenState();
+  ConsumerState<LobbyScreen> createState() => _LobbyScreenState();
 }
 
-class _LobbyScreenState extends State<LobbyScreen> {
+class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool hasLeft = false;
 
   @override
@@ -40,7 +39,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
     super.initState();
     // Callback für Namenskonflikt-Dialog setzen
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = p.Provider.of<LobbyViewModel>(context, listen: false);
+      final viewModel = ref.read(
+        lobbyViewModelProvider(
+          ReconnectData(
+            lobbyId: widget.lobbyId,
+            playerName: widget.playerName,
+            isHost: widget.isHost,
+            gameType: widget.gameType,
+          ),
+        ),
+      );
       viewModel.setOnMustChangeName(() async {
         if (viewModel.mustChangeName && context.mounted) {
           final newName = await showDialog<String>(
@@ -92,22 +100,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return p.ChangeNotifierProvider(
-      create:
-          (_) => LobbyViewModel(lobbyRepository: LobbyRepository())..initialize(
-            lobbyId: widget.lobbyId,
-            playerName: widget.playerName,
-            isHost: widget.isHost,
-            gameType: widget.gameType,
-            context: context,
+    return Consumer(
+      builder: (context, ref, _) {
+        final viewModel = ref.watch(
+          lobbyViewModelProvider(
+            ReconnectData(
+              lobbyId: widget.lobbyId,
+              playerName: widget.playerName,
+              isHost: widget.isHost,
+              gameType: widget.gameType,
+            ),
           ),
-      child: p.Consumer<LobbyViewModel>(
-        builder: (context, viewModel, _) {
-          if (!viewModel.viewModelInitialized) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+        );
+        if (!viewModel.viewModelInitialized) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        {
           // Clients hören auf settingsStarted
           if (!viewModel.isHost) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -300,8 +310,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ),
           );
-        },
-      ),
+        }
+      },
     );
   }
 
@@ -336,7 +346,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     if (shouldLeave) {
       hasLeft = true;
-      await viewModel.leaveLobby(context: context);
+      await viewModel.leaveLobby();
       if (context.mounted) {
         SnackbarHelper.neutral(context, 'Du hast die Lobby verlassen.');
         context.go(AppRoutes.home);

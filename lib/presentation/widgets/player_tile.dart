@@ -1,17 +1,11 @@
 // Datei: lib/presentation/widgets/player_tile.dart
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/core/performance_monitor.dart';
+import 'package:jugend_app/data/providers/user_providers.dart';
 
-final userDataProvider = StreamProvider.family<Map<String, dynamic>?, String>(
-  (ref, uid) => FirebaseFirestore.instance
-      .collection('users')
-      .doc(uid)
-      .snapshots()
-      .map((snap) => snap.data()),
-);
+// Uses shared userDataProvider from data/providers
 
 class PlayerTile extends ConsumerWidget {
   final Map<String, dynamic> player;

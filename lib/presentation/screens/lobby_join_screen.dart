@@ -3,12 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jugend_app/data/models/reconnect_data.dart';
-import 'package:jugend_app/data/services/lobby_service.dart';
+import 'package:jugend_app/data/providers/lobby_providers.dart';
 import 'package:jugend_app/data/services/reconnect_service.dart';
 import 'package:jugend_app/core/snackbar_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jugend_app/core/app_routes.dart';
 import 'package:jugend_app/generated/app_localizations.dart';
 
@@ -35,7 +34,8 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
     if (lobbyId.isEmpty) return;
 
     // Prüfe, ob die Lobby existiert
-    final exists = await LobbyService.lobbyExists(lobbyId);
+    final lobbyRepo = ref.read(lobbyRepositoryProvider);
+    final exists = await lobbyRepo.lobbyExists(lobbyId);
     if (!mounted) return;
     if (!exists) {
       SnackbarHelper.error(
@@ -45,27 +45,17 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
       return;
     }
 
-    // Hole alle Spieler in der Lobby
-    final playersSnapshot =
-        await FirebaseFirestore.instance
-            .collection('lobbies')
-            .doc(lobbyId)
-            .collection('players')
-            .get();
-    final allPlayers = playersSnapshot.docs.map((doc) => doc.data()).toList();
-    final nameExists = allPlayers.any(
-      (p) => (p['name'] as String).toLowerCase() == name.toLowerCase(),
-    );
+    // Prüfe Namen belegt
+    final nameExists = await lobbyRepo.isNameTaken(lobbyId, name);
 
     // Prüfe, ob eingeloggter Nutzer und Namenskonflikt mit anderem eingeloggten Nutzer
     final auth = ref.read(authViewModelProvider);
     final user = auth.profile;
     final isLoggedIn = auth.status == AuthStatus.signedIn && user != null;
     if (isLoggedIn && nameExists) {
-      final conflictPlayer = allPlayers.firstWhere(
-        (p) => (p['name'] as String).toLowerCase() == name.toLowerCase(),
-      );
+      final conflictPlayer = await lobbyRepo.getPlayerByName(lobbyId, name);
       final isOtherLoggedIn =
+          conflictPlayer != null &&
           conflictPlayer['deviceId'] != null &&
           conflictPlayer['deviceId'].toString().isNotEmpty;
 
@@ -108,9 +98,7 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
               ),
         );
         if (!mounted || newName == null || newName.isEmpty) return;
-        final nameTaken = allPlayers.any(
-          (p) => (p['name'] as String).toLowerCase() == newName.toLowerCase(),
-        );
+        final nameTaken = await lobbyRepo.isNameTaken(lobbyId, newName);
         if (nameTaken) {
           SnackbarHelper.error(context, 'Name existiert bereits in der Lobby');
           return;
@@ -195,16 +183,7 @@ class _LobbyJoinScreenState extends State<LobbyJoinScreen> {
                 ] else ...[
                   ElevatedButton(
                     onPressed: () async {
-                      // Hole aktuellen Namen aus Firestore
-                      final userDoc =
-                          await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(user.uid)
-                              .get();
-                      final currentName =
-                          userDoc.data()?['displayName'] ??
-                          user.displayName ??
-                          'Unbekannt';
+                      final currentName = user.displayName ?? 'Unbekannt';
                       _joinLobby(currentName, ref);
                     },
                     child: Text(l10n.labelSave),
