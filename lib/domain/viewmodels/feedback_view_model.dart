@@ -11,6 +11,9 @@ class FeedbackViewModel extends ChangeNotifier {
   bool _isSubmitting = false;
   String? _submitError;
   bool _submitSuccess = false;
+  int _rating = 0;
+  final Map<String, Set<String>> _likeUserIds = {};
+  final Map<String, String> _userVotes = {};
 
   FeedbackViewModel({FeedbackService? service})
     : _service = service ?? FeedbackService();
@@ -21,6 +24,43 @@ class FeedbackViewModel extends ChangeNotifier {
   bool get isSubmitting => _isSubmitting;
   String? get submitError => _submitError;
   bool get submitSuccess => _submitSuccess;
+  int get rating => _rating;
+  Map<String, Set<String>> get likeUserIds => _likeUserIds;
+  Map<String, String> get userVotes => _userVotes;
+
+  void setRating(int rating) {
+    _rating = rating;
+    notifyListeners();
+  }
+
+  void likeFeedback(String feedbackId, String userId) {
+    final currentVote = _userVotes[feedbackId];
+    _likeUserIds.putIfAbsent(feedbackId, () => <String>{});
+    if (currentVote == 'like') {
+      _userVotes.remove(feedbackId);
+      _likeUserIds[feedbackId]?.remove(userId);
+    } else {
+      _userVotes[feedbackId] = 'like';
+      _likeUserIds[feedbackId]?.add(userId);
+    }
+    notifyListeners();
+  }
+
+  void dislikeFeedback(String feedbackId, String userId) {
+    final currentVote = _userVotes[feedbackId];
+    _likeUserIds.putIfAbsent(feedbackId, () => <String>{});
+    if (currentVote == 'dislike') {
+      _userVotes.remove(feedbackId);
+    } else {
+      _userVotes[feedbackId] = 'dislike';
+      _likeUserIds[feedbackId]?.remove(userId);
+    }
+    notifyListeners();
+  }
+
+  String? getUserVote(String feedbackId) {
+    return _userVotes[feedbackId];
+  }
 
   Future<void> loadFeedback() async {
     _isLoading = true;
@@ -28,6 +68,9 @@ class FeedbackViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       _entries = await _service.fetchFeedbackEntries();
+      for (final entry in _entries) {
+        _likeUserIds.putIfAbsent(entry.id, () => <String>{});
+      }
     } catch (e) {
       _error = e.toString();
     }
@@ -72,6 +115,7 @@ class FeedbackViewModel extends ChangeNotifier {
     _isSubmitting = false;
     _submitError = null;
     _submitSuccess = false;
+    _rating = 0;
     notifyListeners();
   }
 }

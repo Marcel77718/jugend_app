@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
+import 'package:go_router/go_router.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -26,20 +27,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final viewModel = ref.read(authViewModelProvider.notifier);
-    final state = ref.read(authViewModelProvider);
-    if (state.status == AuthStatus.loading) {
-      // ...
-    } else if (state.status == AuthStatus.signedOut) {
-      await viewModel.signUpWithEmail(
-        _emailController.text,
-        _passwordController.text,
-      );
-    } else if (state.status == AuthStatus.signedIn) {
+    if (viewModel.isLogin) {
       await viewModel.signInWithEmail(
         _emailController.text,
         _passwordController.text,
       );
+    } else {
+      await viewModel.signUpWithEmail(
+        _emailController.text,
+        _passwordController.text,
+      );
     }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    final viewModel = ref.read(authViewModelProvider.notifier);
+    await viewModel.signInWithGoogle();
   }
 
   Future<void> _resetPassword() async {
@@ -61,6 +64,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final viewModel = ref.read(authViewModelProvider.notifier);
     final state = ref.watch(authViewModelProvider);
+
+    if (state.status == AuthStatus.signedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (ModalRoute.of(context)?.isCurrent ?? false) {
+          context.go('/');
+        }
+      });
+    }
+
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -143,10 +155,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       state.status == AuthStatus.loading
                           ? const CircularProgressIndicator()
                           : Text(
-                            state.status == AuthStatus.signedOut
-                                ? 'Registrieren'
-                                : 'Einloggen',
+                            viewModel.isLogin ? 'Einloggen' : 'Registrieren',
                           ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed:
+                      state.status == AuthStatus.loading
+                          ? null
+                          : _signInWithGoogle,
+                  icon: Image.network(
+                    'https://developers.google.com/identity/images/g-logo.png',
+                    height: 24,
+                    width: 24,
+                  ),
+                  label: const Text('Mit Google anmelden'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(

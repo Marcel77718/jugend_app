@@ -17,6 +17,7 @@ class ProfileScreen extends ConsumerWidget {
     }
     return Scaffold(
       appBar: AppBar(
+        leading: BackButton(onPressed: () => context.go('/')),
         title: const Text('Profil'),
         actions: [
           IconButton(

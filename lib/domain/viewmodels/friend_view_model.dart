@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:jugend_app/domain/viewmodels/auth_view_model.dart';
+import 'package:jugend_app/data/services/lobby_service.dart';
 
 class FriendViewModel extends ChangeNotifier {
   final FriendService _service;
@@ -29,6 +30,29 @@ class FriendViewModel extends ChangeNotifier {
       _service.requestsStream(myUid).map((list) {
         return list.length;
       });
+
+  // Stream für den Status eines Freundes
+  Stream<Map<String, dynamic>> getFriendStatusStream(String friendUid) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(friendUid)
+        .snapshots()
+        .map((doc) {
+          if (!doc.exists) {
+            return {'status': 'offline', 'currentLobbyId': null};
+          }
+          final data = doc.data()!;
+          return {
+            'status': data['status'] ?? 'offline',
+            'currentLobbyId': data['currentLobbyId'],
+          };
+        });
+  }
+
+  // Prüfe ob eine Lobby existiert
+  Future<bool> checkLobbyExists(String lobbyId) async {
+    return await LobbyService.lobbyExists(lobbyId);
+  }
 
   // Suche nach User per Name#Tag
   Future<Map<String, dynamic>?> searchUser(String name, String tag) async {

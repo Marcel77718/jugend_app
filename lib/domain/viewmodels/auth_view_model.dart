@@ -6,6 +6,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jugend_app/core/logging_service.dart';
+import 'dart:async';
+import 'package:flutter/widgets.dart';
 
 enum AuthStatus { loading, signedOut, signedIn }
 
@@ -29,7 +31,8 @@ class AuthState {
   }
 }
 
-class AuthViewModel extends StateNotifier<AuthState> {
+class AuthViewModel extends StateNotifier<AuthState>
+    with WidgetsBindingObserver {
   final AuthService _authService;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLogin = true;
@@ -37,10 +40,19 @@ class AuthViewModel extends StateNotifier<AuthState> {
   bool _showVerificationNotice = false;
   String? _passwordRepeatError;
 
+  Timer? _onlineTimer;
+  String? _lastPresenceStatus;
+
   AuthViewModel({AuthService? authService})
     : _authService = authService ?? AuthService(),
       super(AuthState(status: AuthStatus.loading)) {
     _authService.authStateChanges.listen(_onAuthChanged);
+    WidgetsBinding.instance.addObserver(this);
+    // Wenn beim Start schon ein User eingeloggt ist, setze Status auf online
+    final user = _authService.currentUser;
+    if (user != null) {
+      setPresenceStatus('online');
+    }
   }
 
   // UI-spezifische Getter
@@ -333,6 +345,67 @@ class AuthViewModel extends StateNotifier<AuthState> {
       'status': status,
       'lastActive': FieldValue.serverTimestamp(),
     });
+    _handlePresenceTimer(status);
+  }
+
+  void _handlePresenceTimer(String status) {
+    if (status == _lastPresenceStatus) return;
+    _lastPresenceStatus = status;
+    if (status == 'online') {
+      _setPresenceAndStartTimer('online');
+    } else {
+      _stopOnlineTimer();
+    }
+  }
+
+  void _setPresenceAndStartTimer(String status) {
+    _stopOnlineTimer();
+    _onlineTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      final user = _authService.currentUser;
+      if (user == null) return;
+      await _firestore.collection('users').doc(user.uid).update({
+        'status': 'online',
+        'lastActive': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  void _setPresenceAndStopTimer(String status) async {
+    _stopOnlineTimer();
+    final user = _authService.currentUser;
+    if (user == null) return;
+    await _firestore.collection('users').doc(user.uid).update({
+      'status': status,
+      'lastActive': FieldValue.serverTimestamp(),
+    });
+  }
+
+  void _stopOnlineTimer() {
+    _onlineTimer?.cancel();
+    _onlineTimer = null;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopOnlineTimer();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      // App wird verlassen oder pausiert (wirklich im Hintergrund)
+      if (_lastPresenceStatus == 'online') {
+        _setPresenceAndStopTimer('offline');
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      // App wird wieder aktiv
+      if (_lastPresenceStatus == 'online') {
+        _setPresenceAndStartTimer('online');
+      }
+    }
   }
 
   Future<void> updateProfile({String? displayName, String? photoUrl}) async {
